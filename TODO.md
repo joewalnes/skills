@@ -7,8 +7,8 @@
 
 ## Open
 
-- [ ] **P2** (bug) plugin.json has wrong repository URL
-  `"repository": "https://github.com/joe/skills"` should be `"https://github.com/joewalnes/skills"`
+- [x] **P2** (bug) plugin.json has wrong repository URL — 2026-03-31
+  Resolved: Changed `"repository"` from `joe/skills` to `joewalnes/skills` in `.claude-plugin/plugin.json`
 
 - [ ] **P2** (bug) Broken placeholder link in tool-web skill
   `skills/tool-web/SKILL.md:465` has `https://github.com/...` — either fill in the real URL or remove the Onesies Integration section
