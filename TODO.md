@@ -10,8 +10,8 @@
 - [x] **P2** (bug) plugin.json has wrong repository URL — 2026-03-31
   Resolved: Changed `"repository"` from `joe/skills` to `joewalnes/skills` in `.claude-plugin/plugin.json`
 
-- [ ] **P2** (bug) Broken placeholder link in tool-web skill
-  `skills/tool-web/SKILL.md:465` has `https://github.com/...` — either fill in the real URL or remove the Onesies Integration section
+- [x] **P2** (bug) Broken placeholder link in tool-web skill — 2026-03-31
+  Resolved: Removed the "Onesies Integration" section entirely — it was project-specific boilerplate with a placeholder URL, not appropriate for a shared skill
 
 - [ ] **P3** (chore) Add .gitignore
   Repo has no .gitignore — should exclude `.DS_Store`, `.env`, `*.log`, etc.

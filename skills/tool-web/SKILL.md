@@ -460,13 +460,3 @@ rodney stop
 
 Write a brief test sequence and run it to verify the tool works after building it.
 
-## Onesies Integration
-
-When building a web tool inside the [onesies](https://github.com/...) repository:
-
-- Place the `.html` file in the `web/` directory
-- The single-file rule applies — one `.html` file is the entire tool
-- Update `README.md` with a tool entry under a "Web Tools" category
-- Add `AIDEV-NOTE:` anchor comments for complex logic sections
-- Put user-configurable values (colors, sizes, defaults) in a clear config object near the top of `<script>`
-- Follow CLAUDE.md conventions for documentation and commit practices
