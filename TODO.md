@@ -7,6 +7,12 @@
 
 ## Open
 
+- [ ] **P3** (chore) Standardize frontmatter fields across skills
+  `argument-hint`, `allowed-tools`, `user_invocable` used inconsistently — define which are required vs optional.
+  Skipped in bug bash — ambiguous requirements. Needs decision on: should `allowed-tools` be added to all skills or removed from sitrep? Should `argument-hint` be required when a skill accepts arguments? Is `user_invocable` a real field or leftover?
+
+## Done
+
 - [x] **P2** (bug) plugin.json has wrong repository URL — 2026-03-31
   Resolved: Changed `"repository"` from `joe/skills` to `joewalnes/skills` in `.claude-plugin/plugin.json`
 
@@ -15,11 +21,6 @@
 
 - [x] **P3** (chore) Add .gitignore — 2026-03-31
   Resolved: Added `.gitignore` with standard exclusions (OS files, editor swap files, env files, logs)
-
-- [ ] **P3** (chore) Standardize frontmatter fields across skills
-  `argument-hint`, `allowed-tools`, `user_invocable` used inconsistently — define which are required vs optional
-
-## Done
 
 - [x] **P1** (chore) Deduplicate /bug and /todo skills — 2026-03-31
   Resolved: Replaced 118-line copy-paste in `bug/SKILL.md` with thin wrapper delegating to `/todo`
