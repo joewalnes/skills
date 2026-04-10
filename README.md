@@ -45,6 +45,7 @@ make list       # Show available skills and install status
 | `hello-world` | A simple test greeting skill |
 | `project-setup` | Walk through project setup improvements for AI-assisted development |
 | `readme` | Generate or update project README documentation |
+| `release-setup` | Set up automated cross-platform binary releases for a Go project |
 | `scorecard` | Comprehensive codebase quality audit with letter grades |
 | `sitrep` | Quick situation report — recap progress, uncommitted work, gaps, and next steps |
 | `todo` | Add a new bug or todo to the project's tracker |
