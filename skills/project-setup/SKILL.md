@@ -224,6 +224,8 @@ Anti-patterns to avoid:
 - Starting 4 things, finishing 0
 - Saying "let me commit this and move on to..." when the current thing isn't verified
 - Adding code that changes behavior without testing the behavior changed
+- Reacting to new user messages mid-task instead of finishing current work first
+- Saying "let me ignore X for now" — either fix it or explicitly tell the user it's queued
 ```
 ---
 
