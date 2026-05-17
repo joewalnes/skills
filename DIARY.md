@@ -4,6 +4,29 @@ Latest entries first. Record significant decisions, architecture changes, and no
 
 ---
 
+## 2026-05-17 — `tool-web` CSS replaced with House Style (3-section token system)
+
+Swapped the ad-hoc CSS guidance (minimal reset, free-form typography catalog, hex-coded `#111`/`#555`/`#999` visual hierarchy) for a **House Style** organised as three independent sections: Reset (required), Typography (optional), Color (optional). All colors are now OKLCH tokens (`--bg`, `--bg-muted`, `--text-heading`, `--text-body`, `--text-muted`, `--border`, `--accent`, `--link`, …) driven by a single `--hue` knob. Light/dark auto-follow OS with `data-theme="light|dark"` override.
+
+**Decisions and conflicts resolved:**
+
+- **Heading-weight direction flipped** from lighter-as-larger (h1: 300 → h3: 500) to heavier-as-larger (h1: 900 → h4: 600). The old approach was a deliberate aesthetic ("consistent perceived stroke width") that works well for refined display type; the new approach is more conventional, has more punch with slab/serif headings, and the source spec explicitly marks it as non-configurable. House Style wins over per-tool taste — that's the whole point of a house style.
+- **Hardcoded colors deleted.** `#111 / #555 / #999` is replaced by the `--text-*` tiers. The `Visual Hierarchy` subsection was replaced by a token-rules subsection ("Styling new elements").
+- **Font-stack catalog shrunk** from ~14 named stacks to four (`--sans-serif`, `--serif`, `--code`, `--slab`). Link to modernfontstacks.com retained for users who want more variety.
+- **`-webkit-font-smoothing: antialiased` dropped** — modern best practice is not to force it; it makes text look thinner than designed on macOS.
+- **Universal `padding: 0` reset dropped** — was too aggressive (broke `<button>`, list defaults). Only `margin: 0` resets now.
+- **`min-height: 100dvh` kept** on body (better than `100vh` for mobile chrome) even though the source spec used `100vh`.
+- **`.template { display: none !important }` merged into Section 1** — it's load-bearing for the stamp pattern.
+
+**Known issues flagged in the doc, not fixed:**
+
+- The dark palette is duplicated between the `prefers-color-scheme` media query and `[data-theme="dark"]`. Two copies to keep in sync. Could deduplicate with a selector list or `:where()` — not done because the current form is the most readable.
+- Heading text hue is fixed at 280 regardless of `--hue` (by design — cool text + warm bg + hue-driven accent — but worth telling the user).
+- Hover/chart guidance uses `oklch(from var(--accent) …)` relative-color syntax, which needs Chrome 119+ / Safari 16.4+ / Firefox 128+. Inside the modern-browsers target, but tighter than plain `oklch()`.
+- Body has a 200ms background/color transition; on first paint with mismatched theme, a brief animation plays. Acceptable; could guard with `prefers-reduced-motion` if it becomes annoying.
+
+---
+
 ## 2026-05-17 — `el()` gains event-listener binding
 
 Extended the `el()` helper in `tool-web` to bind functions passed under `on*` keys as event listeners via `addEventListener`, rather than coercing them into string attributes. Previously the skill explicitly called this out as a non-feature ("deliberately simple — no event binding"), and the recommended approach was to attach listeners on the returned element after creation.
