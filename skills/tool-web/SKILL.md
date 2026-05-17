@@ -36,7 +36,7 @@ Any of these rules may be broken with a good reason and explicit user approval.
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tool Name">
   <style>
-    /* CSS here */
+    /* House Style — Section 1 (Reset), Section 2 (Typography), Section 3 (Color). See CSS section below. */
   </style>
 </head>
 <body>
@@ -92,95 +92,126 @@ const isStandalone = window.navigator.standalone === true
 
 ## CSS
 
-### Minimal Reset
+The CSS is a **House Style** in three sections — Reset (required), Typography (optional), Color (optional) — all in one inline `<style>` in `<head>`. Sections are independent: keep only Section 1, or 1+2, for a trivial output. Include all three by default.
+
+**The only knobs you should turn:**
+
+- `--hue` (0–360) — drives the entire accent. Match the doc: ~30 warm, ~140 green, ~220 blue, ~300 violet, ~330 magenta.
+- `--font-body` / `--font-heading` — pick from `--sans-serif`, `--serif`, `--code`, `--slab`.
+
+Heading weights are standardized (heavier as larger) — do not change. Theme auto-follows OS; force with `data-theme="light"` or `data-theme="dark"` on `<html>`.
+
+**Embed note:** if mounted somewhere `:root`/`html`/`body` aren't the real root (shadow DOM, sandbox iframe), move the Section 3 `:root` blocks to a `.app` wrapper class, wrap the page in `<div class="app">`, and paint `--bg` on `.app` with `min-height: 100vh`. Normal pages: use as-is.
+
+### Section 1 — Reset (required)
 
 ```css
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { min-height: 100dvh; -webkit-font-smoothing: antialiased; }
-img, svg { display: block; max-width: 100%; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+html { background: var(--bg, transparent); min-height: 100%; }
+body { min-height: 100dvh; line-height: calc(1em + 0.5rem); -webkit-text-size-adjust: 100%; }
+img, picture, svg, video { display: block; max-width: 100%; }
 input, button, textarea, select { font: inherit; }
-```
-
-### Template Hiding
-
-```css
+pre { overflow: auto; }
+p, li, figcaption { text-wrap: pretty; }
+h1, h2, h3, h4 { text-wrap: balance; }
 .template { display: none !important; }
 ```
 
-### Typography
+`.template` is required by the stamp pattern (see JavaScript section). `--bg` falls back to `transparent` so this section works without Section 3.
 
-Use system font stacks from [modernfontstacks.com](https://modernfontstacks.com). No web fonts, no Google Fonts.
-
-**Recommended pairings — pick a readable stack for body, something with more character for headings:**
-
-Body/UI (prioritize readability):
-- **System UI**: `system-ui, sans-serif`
-- **Neo-Grotesque**: `Inter, Roboto, 'Helvetica Neue', 'Arial Nova', 'Nimbus Sans', Arial, sans-serif`
-- **Humanist**: `Seravek, 'Gill Sans Nova', Ubuntu, Calibri, 'DejaVu Sans', source-sans-pro, sans-serif`
-
-Headings (more character):
-- **Geometric Humanist**: `Avenir, Montserrat, Corbel, 'URW Gothic', source-sans-pro, sans-serif`
-- **Classical Humanist**: `Optima, Candara, 'Noto Sans', source-sans-pro, sans-serif`
-- **Old Style**: `'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L', P052, serif`
-- **Transitional**: `Charter, 'Bitstream Charter', 'Sitka Text', Cambria, serif`
-- **Didone**: `Didot, 'Bodoni MT', 'Noto Serif Display', 'URW Palladio L', P052, Sylfaen, serif`
-
-Code:
-- **Monospace Code**: `ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace`
-
-All available stacks for reference:
-- **System UI**: `system-ui, sans-serif`
-- **Transitional**: `Charter, 'Bitstream Charter', 'Sitka Text', Cambria, serif`
-- **Old Style**: `'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L', P052, serif`
-- **Humanist**: `Seravek, 'Gill Sans Nova', Ubuntu, Calibri, 'DejaVu Sans', source-sans-pro, sans-serif`
-- **Geometric Humanist**: `Avenir, Montserrat, Corbel, 'URW Gothic', source-sans-pro, sans-serif`
-- **Classical Humanist**: `Optima, Candara, 'Noto Sans', source-sans-pro, sans-serif`
-- **Neo-Grotesque**: `Inter, Roboto, 'Helvetica Neue', 'Arial Nova', 'Nimbus Sans', Arial, sans-serif`
-- **Monospace Slab Serif**: `'Nimbus Mono PS', 'Courier New', monospace`
-- **Monospace Code**: `ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace`
-- **Industrial**: `Bahnschrift, 'DIN Alternate', 'Franklin Gothic Medium', 'Nimbus Sans Narrow', sans-serif-condensed, sans-serif`
-- **Rounded Sans**: `ui-rounded, 'Hiragino Maru Gothic ProN', Quicksand, Comfortaa, Manjari, 'Arial Rounded MT', 'Arial Rounded MT Bold', Calibri, source-sans-pro, sans-serif`
-- **Slab Serif**: `Rockwell, 'Rockwell Nova', 'Roboto Slab', 'DejaVu Serif', 'Sitka Small', serif`
-- **Antique**: `Superclarendon, 'Bookman Old Style', 'URW Bookman', 'URW Bookman L', 'Georgia Pro', Georgia, serif`
-- **Didone**: `Didot, 'Bodoni MT', 'Noto Serif Display', 'URW Palladio L', P052, Sylfaen, serif`
-- **Handwritten**: `'Segoe Print', 'Bradley Hand', Chilanka, TSCu_Comic, casual, cursive`
-
-### Font Weight ↔ Size Relationship
-
-As fonts get larger, decrease weight so perceived line thickness stays roughly constant:
+### Section 2 — Typography (optional)
 
 ```css
-h1 { font-size: 2.5rem; font-weight: 300; }
-h2 { font-size: 1.75rem; font-weight: 400; }
-h3 { font-size: 1.25rem; font-weight: 500; }
-body { font-size: 1rem; font-weight: 400; }
-small { font-size: 0.875rem; font-weight: 450; }
+:root {
+  --sans-serif: system-ui, sans-serif;
+  --serif: 'Iowan Old Style', Palatino, 'Palatino Linotype', serif;
+  --code: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+  --slab: Rockwell, 'Rockwell Nova', 'Sitka Small', Georgia, serif;
+  --font-body: var(--sans-serif);
+  --font-heading: var(--slab);
+}
+body { font-family: var(--font-body); font-weight: 400; }
+h1, h2, h3, h4 { font-family: var(--font-heading); }
+h1 { font-size: clamp(2.5rem, 8vw, 4.25rem);   font-weight: 900; line-height: 1.05; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.85rem, 5vw, 2.6rem);   font-weight: 800; line-height: 1.12; letter-spacing: -0.015em; }
+h3 { font-size: clamp(1.45rem, 3.5vw, 1.85rem); font-weight: 700; line-height: 1.2; }
+h4 { font-size: clamp(1.2rem, 2.5vw, 1.4rem);   font-weight: 600; line-height: 1.25; }
+code, pre { font-family: var(--code); }
 ```
 
-Adjust to taste — the principle is visual consistency of stroke width across sizes, not exact numbers.
+Sizes are fluid via `clamp()` — no breakpoints needed for headings. System fonts only; no webfonts, no Google Fonts. For other stacks, see [modernfontstacks.com](https://modernfontstacks.com) and swap into the four named tokens.
 
-### Responsive Design
+### Section 3 — Color (optional)
 
-Mobile-first. Use `min-width` breakpoints:
+```css
+:root {
+  --hue: 30;
+  color-scheme: light dark;
+  --bg:           light-dark(oklch(0.97 0.012 90),     oklch(0.17 0.02 280));
+  --bg-muted:     light-dark(oklch(0.93 0.014 90),     oklch(0.23 0.02 280));
+  --text-heading: light-dark(oklch(0.22 0.02 280),     oklch(0.96 0.012 90));
+  --text-body:    light-dark(oklch(0.36 0.018 280),    oklch(0.84 0.015 90));
+  --text-muted:   light-dark(oklch(0.52 0.016 280),    oklch(0.66 0.016 90));
+  --border:       light-dark(oklch(0.80 0.015 90),     oklch(0.36 0.02 280));
+  --field-text:   light-dark(oklch(0.28 0.02 280),     oklch(0.90 0.014 90));
+  --link:         light-dark(oklch(0.52 0.13 var(--hue)),  oklch(0.74 0.13 var(--hue)));
+  --link-hover:   light-dark(oklch(0.44 0.14 var(--hue)),  oklch(0.82 0.12 var(--hue)));
+  --accent:       light-dark(oklch(0.62 0.15 var(--hue)),  oklch(0.70 0.15 var(--hue)));
+  --on-accent:    light-dark(oklch(0.98 0.01 90),      oklch(0.17 0.02 280));
+}
+[data-theme="light"] { color-scheme: light; }
+[data-theme="dark"]  { color-scheme: dark; }
+
+body { background: var(--bg); color: var(--text-body); transition: background .2s, color .2s; }
+h1, h2, h3, h4 { color: var(--text-heading); }
+a { color: var(--link); text-underline-offset: 2px; }
+a:hover { color: var(--link-hover); }
+code, pre { background: var(--bg-muted); border-radius: 6px; }
+code { color: var(--text-body); padding: 0.1rem 0.35rem; }
+pre { border: 1px solid var(--border); padding: 1rem; }
+input, textarea, select { background: var(--bg); color: var(--field-text); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.75rem; }
+::placeholder { color: var(--text-muted); opacity: 1; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+}
+```
+
+**How the theme switch works.** `color-scheme: light dark` at `:root` tells the browser the page supports both modes and to use the user's OS preference. `light-dark(L, D)` returns `L` when the used color scheme is light, `D` when dark — so each token reads naturally with light value first. `[data-theme="light"]` / `[data-theme="dark"]` on `<html>` force the scheme, and every `light-dark()` value follows automatically. No duplicated palette, no second selector.
+
+**About the body transition.** It only animates on *changes* after first paint — typically a user theme toggle or an OS-level preference flip — not on initial render. The `prefers-reduced-motion` block disables it for users with the OS reduce-motion preference set; it's an accessibility courtesy, not a flash mitigation.
+
+**Browser support:** `oklch()` needs Chrome 111+ / Safari 15.4+ / Firefox 113+. `light-dark()` needs Chrome 123+ / Safari 17.5+ / Firefox 120+. The `oklch(from ...)` relative-color form (hover guidance, chart series) needs Chrome 119+ / Safari 16.4+ / Firefox 128+. All comfortably inside the modern-browsers target.
+
+**Heading hue is fixed at 280 (cool)** regardless of `--hue` — by design, to pair cool text with a warm bg and a hue-driven accent. Changing `--hue` won't shift heading tint.
+
+### Styling new elements — rules
+
+Build everything from tokens. Never hardcode a color or px font size.
+
+- **Surfaces:** page = `--bg`; any raised/inset element (card, sidebar, well, table header, input) = `--bg-muted`. No third surface — use a `--border` hairline for more separation.
+- **Text tiers, in order:** titles/headings = `--text-heading`; body/content = `--text-body`; captions, metadata, eyebrows, helper text = `--text-muted`. Never mix tiers up.
+- **Accent = action/emphasis only**, small areas: buttons, active/selected states, links, focus, badges, key data points. Text on accent fill = `--on-accent`. Never flood the reading area with accent.
+- **Borders/dividers:** `--border`, 1px, sparingly. Prefer spacing over rules.
+- **Hover:** links → `--link-hover`; accent surfaces → `oklch(from var(--accent) calc(l - 0.06) c h)`. Never remove `:focus-visible`.
+- **Spacing:** `rem`, multiples of `0.25rem`; cap prose width at ~40rem; more space above a heading than below.
+- **Radius/shadow:** ~6px small elements, ~10px cards; shadows subtle and tinted, never pure black; in dark mode, prefer a border over a shadow.
+- **Charts:** rotate `--hue` for series (`oklch(0.62 0.15 calc(var(--hue) + 60))`, `+120`, …); gridlines `--border`, labels `--text-muted`, highlight `--accent`.
+- **Self-test:** every addition must read correctly in light *and* dark. It will if you used tokens; if it breaks in one theme, you hardcoded something.
+- **Restraint:** whitespace and hierarchy over decoration. One accent. No gradients or multi-color schemes unless asked.
+
+### Layout responsive breakpoints
+
+Heading sizes are already fluid via `clamp()` — no media queries needed for type. For container layout, use mobile-first `min-width` breakpoints:
 
 ```css
 .container { padding: 1rem; max-width: 100%; }
-
-@media (min-width: 640px) { .container { padding: 2rem; } }
+@media (min-width: 640px)  { .container { padding: 2rem; } }
 @media (min-width: 1024px) { .container { max-width: 960px; margin: 0 auto; } }
 ```
 
-Use `clamp()` for fluid sizing: `font-size: clamp(1rem, 2.5vw, 1.25rem);`
-
-Test at 320px minimum viewport width. No horizontal scrolling at any size.
-
-### Visual Hierarchy
-
-- Use spacing (margin/padding) more than decoration (borders, backgrounds) to create structure
-- Limit to 2-3 font sizes plus one accent color
-- Primary text: `#111`. Secondary: `#555`. Tertiary: `#999`
-- One accent color max. Derive hover/active states with opacity
-- When in doubt, add more whitespace
+Use `clamp()` for any other fluid sizing. Test at 320px minimum viewport — no horizontal scrolling at any size.
 
 ## JavaScript
 
@@ -212,7 +243,13 @@ function el(tag, ...args) {
     if (typeof arg === 'string') e.append(arg);
     else if (arg instanceof Node) e.appendChild(arg);
     else if (arg && typeof arg === 'object') {
-      for (const [k, v] of Object.entries(arg)) e.setAttribute(k, v);
+      for (const [k, v] of Object.entries(arg)) {
+        if (typeof v === 'function' && k.startsWith('on')) {
+          e.addEventListener(k.slice(2), v);
+        } else {
+          e.setAttribute(k, v);
+        }
+      }
     }
   }
   return e;
@@ -242,7 +279,19 @@ el('div', { class: 'card' },
 el('ul', ...items.map(item => el('li', item.name)))  // spread for arrays
 ```
 
-`el()` is deliberately simple — no event binding, no style objects, no special-casing. Attach listeners on the returned element: `myBtn.onclick = handler` or `myBtn.addEventListener('click', handler)`.
+**Event listeners** — keys starting with `on` whose value is a function are bound via `addEventListener` instead of being set as attributes:
+
+```js
+el('button', { class: 'primary', onclick: () => save() }, 'Save')
+
+el('input', {
+  type: 'text',
+  oninput: e => filter(e.target.value),
+  onfocus: e => e.target.select(),
+})
+```
+
+This mirrors HTML inline-handler syntax (`onclick`, `oninput`) but uses `addEventListener` under the hood, so multiple listeners stack instead of overwriting. For event-listener options (`{ once: true }`, `{ passive: true }`), bind on the returned element directly. Prefer event delegation (see below) for dynamic/stamped content — keep `on*` handlers for one-off elements created with `el()`.
 
 ### Template / Stamp Pattern
 
@@ -350,6 +399,161 @@ Use HTML's built-in interactive elements before building custom ones:
 - `<datalist>` for autocomplete suggestions
 - `<fieldset>` / `<legend>` for grouped form controls
 
+## Worked Example
+
+A complete, copy-pasteable file showing all three House Style sections, the stamp pattern, and `el()` event binding. Save as `notes.html` and open it — works from `file:///`. Try toggling your OS dark mode, or set `data-theme="dark"` on `<html>`.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Notes</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Notes">
+  <style>
+    /* Section 1 — Reset */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    html { background: var(--bg, transparent); min-height: 100%; }
+    body { min-height: 100dvh; line-height: calc(1em + 0.5rem); -webkit-text-size-adjust: 100%; }
+    img, picture, svg, video { display: block; max-width: 100%; }
+    input, button, textarea, select { font: inherit; }
+    pre { overflow: auto; }
+    p, li, figcaption { text-wrap: pretty; }
+    h1, h2, h3, h4 { text-wrap: balance; }
+    .template { display: none !important; }
+
+    /* Section 2 — Typography */
+    :root {
+      --sans-serif: system-ui, sans-serif;
+      --serif: 'Iowan Old Style', Palatino, 'Palatino Linotype', serif;
+      --code: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+      --slab: Rockwell, 'Rockwell Nova', 'Sitka Small', Georgia, serif;
+      --font-body: var(--sans-serif);
+      --font-heading: var(--slab);
+    }
+    body { font-family: var(--font-body); font-weight: 400; }
+    h1, h2, h3, h4 { font-family: var(--font-heading); }
+    h1 { font-size: clamp(2.5rem, 8vw, 4.25rem); font-weight: 900; line-height: 1.05; letter-spacing: -0.02em; }
+    h2 { font-size: clamp(1.45rem, 3.5vw, 1.85rem); font-weight: 700; line-height: 1.2; }
+    code, pre { font-family: var(--code); }
+
+    /* Section 3 — Color */
+    :root {
+      --hue: 220;
+      color-scheme: light dark;
+      --bg:           light-dark(oklch(0.97 0.012 90),     oklch(0.17 0.02 280));
+      --bg-muted:     light-dark(oklch(0.93 0.014 90),     oklch(0.23 0.02 280));
+      --text-heading: light-dark(oklch(0.22 0.02 280),     oklch(0.96 0.012 90));
+      --text-body:    light-dark(oklch(0.36 0.018 280),    oklch(0.84 0.015 90));
+      --text-muted:   light-dark(oklch(0.52 0.016 280),    oklch(0.66 0.016 90));
+      --border:       light-dark(oklch(0.80 0.015 90),     oklch(0.36 0.02 280));
+      --field-text:   light-dark(oklch(0.28 0.02 280),     oklch(0.90 0.014 90));
+      --link:         light-dark(oklch(0.52 0.13 var(--hue)),  oklch(0.74 0.13 var(--hue)));
+      --link-hover:   light-dark(oklch(0.44 0.14 var(--hue)),  oklch(0.82 0.12 var(--hue)));
+      --accent:       light-dark(oklch(0.62 0.15 var(--hue)),  oklch(0.70 0.15 var(--hue)));
+      --on-accent:    light-dark(oklch(0.98 0.01 90),      oklch(0.17 0.02 280));
+    }
+    [data-theme="light"] { color-scheme: light; }
+    [data-theme="dark"]  { color-scheme: dark; }
+    body { background: var(--bg); color: var(--text-body); transition: background .2s, color .2s; }
+    h1, h2, h3, h4 { color: var(--text-heading); }
+    code, pre { background: var(--bg-muted); border-radius: 6px; }
+    code { color: var(--text-body); padding: 0.1rem 0.35rem; }
+    input, textarea { background: var(--bg); color: var(--field-text); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.75rem; }
+    ::placeholder { color: var(--text-muted); opacity: 1; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    @media (prefers-reduced-motion: reduce) { body { transition: none; } }
+
+    /* Page — composed entirely from tokens */
+    .page { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
+    .meta { color: var(--text-muted); font-size: 0.875rem; }
+    .card {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-top: 1.25rem;
+      list-style: none;
+    }
+    .card h2 { margin-bottom: 0.25rem; }
+    .row { display: flex; gap: 0.5rem; margin-top: 1.25rem; }
+    .row input { flex: 1; }
+    .btn {
+      background: var(--accent); color: var(--on-accent);
+      border: 0; border-radius: 6px;
+      padding: 0.55rem 1rem; font-weight: 600; cursor: pointer;
+    }
+    .btn:hover { background: oklch(from var(--accent) calc(l - 0.06) c h); }
+    .del {
+      background: transparent; color: var(--text-muted);
+      border: 0; cursor: pointer; padding: 0.25rem 0.5rem; margin-left: auto;
+    }
+    .del:hover { color: var(--text-body); }
+    .note-head { display: flex; align-items: baseline; gap: 0.5rem; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Notes</h1>
+    <p class="meta">A small demo. Toggle your OS theme, or set <code>data-theme="dark"</code> on &lt;html&gt;.</p>
+
+    <ul id="notes">
+      <li class="template card note">
+        <div class="note-head">
+          <h2 class="title"></h2>
+          <button class="del" type="button" aria-label="Delete">×</button>
+        </div>
+        <p class="meta when"></p>
+      </li>
+    </ul>
+
+    <form class="row" id="add-form">
+      <input id="add-input" type="text" placeholder="New note…" required>
+      <button class="btn" type="submit">Add</button>
+    </form>
+  </main>
+
+  <script>
+    const $ = (sel, ctx = document) => ctx.querySelector(sel);
+
+    function stamp(selector) {
+      const tmpl = $(selector);
+      const clone = tmpl.cloneNode(true);
+      clone.classList.remove('template');
+      tmpl.parentNode.appendChild(clone);
+      return clone;
+    }
+
+    function addNote(title) {
+      const n = stamp('.note.template');
+      $('.title', n).textContent = title;
+      $('.when',  n).textContent = new Date().toLocaleString();
+    }
+
+    // Delegated delete — works for current and future notes.
+    $('#notes').addEventListener('click', e => {
+      const del = e.target.closest('.del');
+      if (del) del.closest('.note').remove();
+    });
+
+    $('#add-form').onsubmit = e => {
+      e.preventDefault();
+      const input = $('#add-input');
+      const v = input.value.trim();
+      if (v) addNote(v);
+      input.value = '';
+    };
+
+    addNote('Welcome');
+  </script>
+</body>
+</html>
+```
+
+**What to notice.** Page-specific CSS never names a color or px font size — every value is a token (`--bg-muted`, `--text-muted`, `--accent`, `--on-accent`, `--border`). The button hover uses the relative-color trick. The `.note` template lives in the DOM behind `.template { display: none }`, stamped to create each card. Delete uses delegation on `#notes`, so newly added notes work without re-binding. Open the file, flip your OS theme, and everything reads correctly in both — that's the self-test.
+
 ## External Dependencies
 
 ### Policy
@@ -412,11 +616,11 @@ Always pin the version and use SRI hashes:
 ## Design Principles
 
 - **Minimal, clean, no clutter** — every element earns its place
-- **Strong visual hierarchy** — primary, secondary, tertiary levels should be immediately obvious
+- **Strong visual hierarchy** — heading / body / muted text tiers should be immediately obvious; use the `--text-*` tokens, don't invent new tiers
 - **Generous whitespace** — when in doubt, add more space
 - **Subtle interactions** — small transitions (150–200ms) on hover/focus. No flashy animations
-- **Dark mode** — consider `@media (prefers-color-scheme: dark)` if appropriate for the tool
-- **Accessibility basics** — semantic HTML, visible focus states, sufficient color contrast
+- **Dark mode is built in** — Section 3 handles auto-follow-OS plus `data-theme` override. Test every change in both themes
+- **Accessibility basics** — semantic HTML, visible focus states (`:focus-visible` is pre-wired), sufficient color contrast (tokens are tuned for AA)
 
 ## `file:///` Compatibility
 
