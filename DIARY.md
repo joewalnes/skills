@@ -18,12 +18,16 @@ Swapped the ad-hoc CSS guidance (minimal reset, free-form typography catalog, he
 - **`min-height: 100dvh` kept** on body (better than `100vh` for mobile chrome) even though the source spec used `100vh`.
 - **`.template { display: none !important }` merged into Section 1** — it's load-bearing for the stamp pattern.
 
-**Known issues flagged in the doc, not fixed:**
+**Known issues flagged in the doc:**
 
-- The dark palette is duplicated between the `prefers-color-scheme` media query and `[data-theme="dark"]`. Two copies to keep in sync. Could deduplicate with a selector list or `:where()` — not done because the current form is the most readable.
 - Heading text hue is fixed at 280 regardless of `--hue` (by design — cool text + warm bg + hue-driven accent — but worth telling the user).
 - Hover/chart guidance uses `oklch(from var(--accent) …)` relative-color syntax, which needs Chrome 119+ / Safari 16.4+ / Firefox 128+. Inside the modern-browsers target, but tighter than plain `oklch()`.
-- Body has a 200ms background/color transition; on first paint with mismatched theme, a brief animation plays. Acceptable; could guard with `prefers-reduced-motion` if it becomes annoying.
+
+**Follow-ups landed same day:**
+
+- **Dark palette de-duplicated** using `light-dark()` plus `color-scheme: light dark` at `:root`. Each token now reads `light-dark(L, D)` in one place; `[data-theme="light"|"dark"]` flips `color-scheme` and every token follows. Lifts the browser-support floor for Section 3 to Chrome 123 / Safari 17.5 / Firefox 120, but those are all from late 2023 / early 2024 — fine for the target.
+- **`prefers-reduced-motion` guard** added to Section 3, disabling the 200ms body color transition when the user has the OS reduce-motion preference set. The earlier "flash on first paint" concern I noted was overstated — CSS transitions don't run on initial computed value, only on subsequent changes. The guard is purely an a11y courtesy for theme toggles and OS-preference changes, not a flash mitigation.
+- **Worked Example section added** between JavaScript and External Dependencies — a complete copy-pasteable `notes.html` that exercises all three House Style sections, the stamp pattern, and event delegation. Concrete demonstration of "page-specific CSS never names a color or px font size."
 
 ---
 

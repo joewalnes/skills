@@ -146,34 +146,22 @@ Sizes are fluid via `clamp()` — no breakpoints needed for headings. System fon
 ```css
 :root {
   --hue: 30;
-  --bg: oklch(0.97 0.012 90);           --bg-muted: oklch(0.93 0.014 90);
-  --text-heading: oklch(0.22 0.02 280); --text-body: oklch(0.36 0.018 280);
-  --text-muted: oklch(0.52 0.016 280);  --border: oklch(0.80 0.015 90);
-  --field-text: oklch(0.28 0.02 280);
-  --link: oklch(0.52 0.13 var(--hue));  --link-hover: oklch(0.44 0.14 var(--hue));
-  --accent: oklch(0.62 0.15 var(--hue)); --on-accent: oklch(0.98 0.01 90);
-  color-scheme: light;
+  color-scheme: light dark;
+  --bg:           light-dark(oklch(0.97 0.012 90),     oklch(0.17 0.02 280));
+  --bg-muted:     light-dark(oklch(0.93 0.014 90),     oklch(0.23 0.02 280));
+  --text-heading: light-dark(oklch(0.22 0.02 280),     oklch(0.96 0.012 90));
+  --text-body:    light-dark(oklch(0.36 0.018 280),    oklch(0.84 0.015 90));
+  --text-muted:   light-dark(oklch(0.52 0.016 280),    oklch(0.66 0.016 90));
+  --border:       light-dark(oklch(0.80 0.015 90),     oklch(0.36 0.02 280));
+  --field-text:   light-dark(oklch(0.28 0.02 280),     oklch(0.90 0.014 90));
+  --link:         light-dark(oklch(0.52 0.13 var(--hue)),  oklch(0.74 0.13 var(--hue)));
+  --link-hover:   light-dark(oklch(0.44 0.14 var(--hue)),  oklch(0.82 0.12 var(--hue)));
+  --accent:       light-dark(oklch(0.62 0.15 var(--hue)),  oklch(0.70 0.15 var(--hue)));
+  --on-accent:    light-dark(oklch(0.98 0.01 90),      oklch(0.17 0.02 280));
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: oklch(0.17 0.02 280);           --bg-muted: oklch(0.23 0.02 280);
-    --text-heading: oklch(0.96 0.012 90); --text-body: oklch(0.84 0.015 90);
-    --text-muted: oklch(0.66 0.016 90);   --border: oklch(0.36 0.02 280);
-    --field-text: oklch(0.90 0.014 90);
-    --link: oklch(0.74 0.13 var(--hue));  --link-hover: oklch(0.82 0.12 var(--hue));
-    --accent: oklch(0.70 0.15 var(--hue)); --on-accent: oklch(0.17 0.02 280);
-    color-scheme: dark;
-  }
-}
-[data-theme="dark"] {
-  --bg: oklch(0.17 0.02 280);           --bg-muted: oklch(0.23 0.02 280);
-  --text-heading: oklch(0.96 0.012 90); --text-body: oklch(0.84 0.015 90);
-  --text-muted: oklch(0.66 0.016 90);   --border: oklch(0.36 0.02 280);
-  --field-text: oklch(0.90 0.014 90);
-  --link: oklch(0.74 0.13 var(--hue));  --link-hover: oklch(0.82 0.12 var(--hue));
-  --accent: oklch(0.70 0.15 var(--hue)); --on-accent: oklch(0.17 0.02 280);
-  color-scheme: dark;
-}
+[data-theme="light"] { color-scheme: light; }
+[data-theme="dark"]  { color-scheme: dark; }
+
 body { background: var(--bg); color: var(--text-body); transition: background .2s, color .2s; }
 h1, h2, h3, h4 { color: var(--text-heading); }
 a { color: var(--link); text-underline-offset: 2px; }
@@ -184,13 +172,19 @@ pre { border: 1px solid var(--border); padding: 1rem; }
 input, textarea, select { background: var(--bg); color: var(--field-text); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.75rem; }
 ::placeholder { color: var(--text-muted); opacity: 1; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+}
 ```
 
-**Browser support:** `oklch()` needs Chrome 111+ / Safari 15.4+ / Firefox 113+ (well inside the modern-browsers target). The `oklch(from ...)` relative-color form used in hover guidance and chart series below needs Chrome 119+ / Safari 16.4+ / Firefox 128+.
+**How the theme switch works.** `color-scheme: light dark` at `:root` tells the browser the page supports both modes and to use the user's OS preference. `light-dark(L, D)` returns `L` when the used color scheme is light, `D` when dark — so each token reads naturally with light value first. `[data-theme="light"]` / `[data-theme="dark"]` on `<html>` force the scheme, and every `light-dark()` value follows automatically. No duplicated palette, no second selector.
+
+**About the body transition.** It only animates on *changes* after first paint — typically a user theme toggle or an OS-level preference flip — not on initial render. The `prefers-reduced-motion` block disables it for users with the OS reduce-motion preference set; it's an accessibility courtesy, not a flash mitigation.
+
+**Browser support:** `oklch()` needs Chrome 111+ / Safari 15.4+ / Firefox 113+. `light-dark()` needs Chrome 123+ / Safari 17.5+ / Firefox 120+. The `oklch(from ...)` relative-color form (hover guidance, chart series) needs Chrome 119+ / Safari 16.4+ / Firefox 128+. All comfortably inside the modern-browsers target.
 
 **Heading hue is fixed at 280 (cool)** regardless of `--hue` — by design, to pair cool text with a warm bg and a hue-driven accent. Changing `--hue` won't shift heading tint.
-
-The dark palette is duplicated between the media query and `[data-theme="dark"]`. Intentional for cascade simplicity; both blocks must be kept in sync if you customize them.
 
 ### Styling new elements — rules
 
@@ -404,6 +398,161 @@ Use HTML's built-in interactive elements before building custom ones:
 - `<progress>` and `<meter>` for progress/gauges
 - `<datalist>` for autocomplete suggestions
 - `<fieldset>` / `<legend>` for grouped form controls
+
+## Worked Example
+
+A complete, copy-pasteable file showing all three House Style sections, the stamp pattern, and `el()` event binding. Save as `notes.html` and open it — works from `file:///`. Try toggling your OS dark mode, or set `data-theme="dark"` on `<html>`.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Notes</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Notes">
+  <style>
+    /* Section 1 — Reset */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    html { background: var(--bg, transparent); min-height: 100%; }
+    body { min-height: 100dvh; line-height: calc(1em + 0.5rem); -webkit-text-size-adjust: 100%; }
+    img, picture, svg, video { display: block; max-width: 100%; }
+    input, button, textarea, select { font: inherit; }
+    pre { overflow: auto; }
+    p, li, figcaption { text-wrap: pretty; }
+    h1, h2, h3, h4 { text-wrap: balance; }
+    .template { display: none !important; }
+
+    /* Section 2 — Typography */
+    :root {
+      --sans-serif: system-ui, sans-serif;
+      --serif: 'Iowan Old Style', Palatino, 'Palatino Linotype', serif;
+      --code: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+      --slab: Rockwell, 'Rockwell Nova', 'Sitka Small', Georgia, serif;
+      --font-body: var(--sans-serif);
+      --font-heading: var(--slab);
+    }
+    body { font-family: var(--font-body); font-weight: 400; }
+    h1, h2, h3, h4 { font-family: var(--font-heading); }
+    h1 { font-size: clamp(2.5rem, 8vw, 4.25rem); font-weight: 900; line-height: 1.05; letter-spacing: -0.02em; }
+    h2 { font-size: clamp(1.45rem, 3.5vw, 1.85rem); font-weight: 700; line-height: 1.2; }
+    code, pre { font-family: var(--code); }
+
+    /* Section 3 — Color */
+    :root {
+      --hue: 220;
+      color-scheme: light dark;
+      --bg:           light-dark(oklch(0.97 0.012 90),     oklch(0.17 0.02 280));
+      --bg-muted:     light-dark(oklch(0.93 0.014 90),     oklch(0.23 0.02 280));
+      --text-heading: light-dark(oklch(0.22 0.02 280),     oklch(0.96 0.012 90));
+      --text-body:    light-dark(oklch(0.36 0.018 280),    oklch(0.84 0.015 90));
+      --text-muted:   light-dark(oklch(0.52 0.016 280),    oklch(0.66 0.016 90));
+      --border:       light-dark(oklch(0.80 0.015 90),     oklch(0.36 0.02 280));
+      --field-text:   light-dark(oklch(0.28 0.02 280),     oklch(0.90 0.014 90));
+      --link:         light-dark(oklch(0.52 0.13 var(--hue)),  oklch(0.74 0.13 var(--hue)));
+      --link-hover:   light-dark(oklch(0.44 0.14 var(--hue)),  oklch(0.82 0.12 var(--hue)));
+      --accent:       light-dark(oklch(0.62 0.15 var(--hue)),  oklch(0.70 0.15 var(--hue)));
+      --on-accent:    light-dark(oklch(0.98 0.01 90),      oklch(0.17 0.02 280));
+    }
+    [data-theme="light"] { color-scheme: light; }
+    [data-theme="dark"]  { color-scheme: dark; }
+    body { background: var(--bg); color: var(--text-body); transition: background .2s, color .2s; }
+    h1, h2, h3, h4 { color: var(--text-heading); }
+    code, pre { background: var(--bg-muted); border-radius: 6px; }
+    code { color: var(--text-body); padding: 0.1rem 0.35rem; }
+    input, textarea { background: var(--bg); color: var(--field-text); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.75rem; }
+    ::placeholder { color: var(--text-muted); opacity: 1; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    @media (prefers-reduced-motion: reduce) { body { transition: none; } }
+
+    /* Page — composed entirely from tokens */
+    .page { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
+    .meta { color: var(--text-muted); font-size: 0.875rem; }
+    .card {
+      background: var(--bg-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-top: 1.25rem;
+      list-style: none;
+    }
+    .card h2 { margin-bottom: 0.25rem; }
+    .row { display: flex; gap: 0.5rem; margin-top: 1.25rem; }
+    .row input { flex: 1; }
+    .btn {
+      background: var(--accent); color: var(--on-accent);
+      border: 0; border-radius: 6px;
+      padding: 0.55rem 1rem; font-weight: 600; cursor: pointer;
+    }
+    .btn:hover { background: oklch(from var(--accent) calc(l - 0.06) c h); }
+    .del {
+      background: transparent; color: var(--text-muted);
+      border: 0; cursor: pointer; padding: 0.25rem 0.5rem; margin-left: auto;
+    }
+    .del:hover { color: var(--text-body); }
+    .note-head { display: flex; align-items: baseline; gap: 0.5rem; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Notes</h1>
+    <p class="meta">A small demo. Toggle your OS theme, or set <code>data-theme="dark"</code> on &lt;html&gt;.</p>
+
+    <ul id="notes">
+      <li class="template card note">
+        <div class="note-head">
+          <h2 class="title"></h2>
+          <button class="del" type="button" aria-label="Delete">×</button>
+        </div>
+        <p class="meta when"></p>
+      </li>
+    </ul>
+
+    <form class="row" id="add-form">
+      <input id="add-input" type="text" placeholder="New note…" required>
+      <button class="btn" type="submit">Add</button>
+    </form>
+  </main>
+
+  <script>
+    const $ = (sel, ctx = document) => ctx.querySelector(sel);
+
+    function stamp(selector) {
+      const tmpl = $(selector);
+      const clone = tmpl.cloneNode(true);
+      clone.classList.remove('template');
+      tmpl.parentNode.appendChild(clone);
+      return clone;
+    }
+
+    function addNote(title) {
+      const n = stamp('.note.template');
+      $('.title', n).textContent = title;
+      $('.when',  n).textContent = new Date().toLocaleString();
+    }
+
+    // Delegated delete — works for current and future notes.
+    $('#notes').addEventListener('click', e => {
+      const del = e.target.closest('.del');
+      if (del) del.closest('.note').remove();
+    });
+
+    $('#add-form').onsubmit = e => {
+      e.preventDefault();
+      const input = $('#add-input');
+      const v = input.value.trim();
+      if (v) addNote(v);
+      input.value = '';
+    };
+
+    addNote('Welcome');
+  </script>
+</body>
+</html>
+```
+
+**What to notice.** Page-specific CSS never names a color or px font size — every value is a token (`--bg-muted`, `--text-muted`, `--accent`, `--on-accent`, `--border`). The button hover uses the relative-color trick. The `.note` template lives in the DOM behind `.template { display: none }`, stamped to create each card. Delete uses delegation on `#notes`, so newly added notes work without re-binding. Open the file, flip your OS theme, and everything reads correctly in both — that's the self-test.
 
 ## External Dependencies
 
