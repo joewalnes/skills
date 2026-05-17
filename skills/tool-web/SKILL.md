@@ -212,7 +212,13 @@ function el(tag, ...args) {
     if (typeof arg === 'string') e.append(arg);
     else if (arg instanceof Node) e.appendChild(arg);
     else if (arg && typeof arg === 'object') {
-      for (const [k, v] of Object.entries(arg)) e.setAttribute(k, v);
+      for (const [k, v] of Object.entries(arg)) {
+        if (typeof v === 'function' && k.startsWith('on')) {
+          e.addEventListener(k.slice(2), v);
+        } else {
+          e.setAttribute(k, v);
+        }
+      }
     }
   }
   return e;
@@ -242,7 +248,19 @@ el('div', { class: 'card' },
 el('ul', ...items.map(item => el('li', item.name)))  // spread for arrays
 ```
 
-`el()` is deliberately simple — no event binding, no style objects, no special-casing. Attach listeners on the returned element: `myBtn.onclick = handler` or `myBtn.addEventListener('click', handler)`.
+**Event listeners** — keys starting with `on` whose value is a function are bound via `addEventListener` instead of being set as attributes:
+
+```js
+el('button', { class: 'primary', onclick: () => save() }, 'Save')
+
+el('input', {
+  type: 'text',
+  oninput: e => filter(e.target.value),
+  onfocus: e => e.target.select(),
+})
+```
+
+This mirrors HTML inline-handler syntax (`onclick`, `oninput`) but uses `addEventListener` under the hood, so multiple listeners stack instead of overwriting. For event-listener options (`{ once: true }`, `{ passive: true }`), bind on the returned element directly. Prefer event delegation (see below) for dynamic/stamped content — keep `on*` handlers for one-off elements created with `el()`.
 
 ### Template / Stamp Pattern
 
