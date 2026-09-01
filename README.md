@@ -42,6 +42,8 @@ make list       # Show available skills and install status
 |-------|-------------|
 | `bug` | Add a new bug to the project's tracker (alias for `/todo`) |
 | `bug-bash` | Autonomously work through a project's bug list, fixing bugs in priority order |
+| `delegate` | Delegate tasks to external non-Claude agents: image generation, security analysis (GLM), private on-device work (local Ollama), second-opinion review (Kimi/GPT), cheap bulk work |
+| `go-team` | Run a crew of parallel agents on a project — dispatch, verify behaviourally, gate, merge |
 | `hello-world` | A simple test greeting skill |
 | `project-setup` | Walk through project setup improvements for AI-assisted development |
 | `readme` | Generate or update project README documentation |
