@@ -4,6 +4,20 @@ Latest entries first. Record significant decisions, architecture changes, and no
 
 ---
 
+## 2026-09-01 — Split /delegate into 5 skills; image panel + jury; bash → Python/Perl
+
+Split the single `/delegate` skill into five standalone ones (`delegate-image`, `delegate-sec`, `delegate-private`, `delegate-review`, `delegate-bulk`) — Joe wanted each surfaced directly in `/` autocomplete rather than buried as an argument inside one umbrella command.
+
+Along the way, ran a real benchmark: generated the same 4 prompts (2 logos, 2 photorealistic scenes) across all 4 Gemini image tiers on OpenRouter, had Claude and Kimi (blind, model identity hidden) critique and rank each, and published the comparison as an artifact gallery. Result was genuinely useful and a little surprising — price didn't track quality. `gemini-3.1-flash-image` (mid-tier, ~$0.067/img) won more blind rankings than `gemini-3-pro-image` (priciest, ~$0.138/img); only `gemini-3.1-flash-lite-image` (cheapest) was a consistent loser. `delegate-image` now defaults to a **3-model parallel panel** (flash, nano-banana 2.5, pro — dropping flash-lite) plus **two independent judge models** (Kimi K2.5, GLM-4.6v — different lineages from the Google generators and from each other) that each critique and pick a favorite. Joe generates images rarely enough that 3x the cost (~$0.24/prompt) is immaterial to him, so the panel is the default, not an opt-in.
+
+A real integrity bug turned up building the judge step: `kimi-k2-thinking` has no vision support, but instead of erroring it fabricated a plausible-sounding critique from the model names embedded in the filenames alone. Caught it because the critique for one image was suspiciously specific for a "blind" test, and confirmed via the model catalog (`images: no`). Lesson embedded in the skill: verify a judge model actually has vision (`pi --list-models` shows `images: yes`) and sanity-check its critique cites real visual specifics, not generic praise — a model can return a confident, wrong answer instead of admitting it can't see the image.
+
+Also hit a genuine bash portability bug while building the throwaway benchmark driver script: `declare -A` (associative arrays) silently failed because macOS ships `/bin/bash` 3.2, which doesn't support them — the script exited on "unbound variable" before generating anything, 4 background jobs in a row, no images produced. Root cause wasn't caught until reading raw task output instead of trusting the "exited 0" status. Fixed the immediate script by dropping associative arrays; fixed the class of bug by adding a CLAUDE.md rule: skill helper scripts must be Python or Perl, not bash, since both are always installed and portable, while bash isn't. Rewrote `delegate-image`'s panel-generation script in Python accordingly.
+
+Other build notes: OpenRouter's per-request credit hold (reserving the model's full max-output-token capacity against the daily key limit) tripped a couple of times independent of actual balance — first on `gpt-5.6-sol` (128k max-out), then on `kimi-k3` (131k max-out) under concurrent judge calls. Worked around by preferring judge models with small max-output (`kimi-k2.5` at 4.1K) rather than trying to tune request concurrency.
+
+---
+
 ## 2026-09-01 — /delegate: external non-Claude agents
 
 Joe was manually copy-pasting between Claude Code and other AI tools for jobs Claude models don't cover: image generation, deep security audits, work on private data that must stay on-device, second-opinion reviews from a different model lineage, and cheap bulk grunt work. Built `/delegate` so these run as briefed sub-agents from inside Claude Code.

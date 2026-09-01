@@ -52,6 +52,7 @@ def main():
         "model": args.model,
         "messages": [{"role": "user", "content": content}],
         "modalities": ["image", "text"],
+        "usage": {"include": True},
     }
     req = urllib.request.Request(
         "https://openrouter.ai/api/v1/chat/completions",
@@ -84,7 +85,8 @@ def main():
     with open(out, "wb") as f:
         f.write(base64.b64decode(match.group(2)))
     text = (message.get("content") or "").strip()
-    print(f"saved: {out}" + (f"\nmodel note: {text}" if text else ""))
+    cost = data.get("usage", {}).get("cost")
+    print(f"saved: {out}" + (f" cost=${cost}" if cost is not None else "") + (f"\nmodel note: {text}" if text else ""))
 
 
 if __name__ == "__main__":

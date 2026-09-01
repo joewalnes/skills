@@ -41,6 +41,10 @@ After creating a new skill in `skills/<name>/SKILL.md`:
 2. Run `make install` to symlink it
 3. Commit both the skill and the README update together
 
+### Scripts
+
+When a skill needs a helper script (not a one-off command in a Bash tool call), write it in **Python or Perl, not bash**. Both are always installed; bash is not portable — macOS ships `/bin/bash` 3.2 (no associative arrays, various POSIX-only gaps), which has caused real bugs (a `declare -A` skill script silently failed on this exact machine). Reserve bash for short inline commands, not committed script files.
+
 ### Skill frontmatter
 
 Every SKILL.md must have `name` and `description`. Add `argument-hint` if the skill accepts arguments — it shows in autocomplete.

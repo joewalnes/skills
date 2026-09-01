@@ -42,7 +42,11 @@ make list       # Show available skills and install status
 |-------|-------------|
 | `bug` | Add a new bug to the project's tracker (alias for `/todo`) |
 | `bug-bash` | Autonomously work through a project's bug list, fixing bugs in priority order |
-| `delegate` | Delegate tasks to external non-Claude agents: image generation, security analysis (GLM), private on-device work (local Ollama), second-opinion review (Kimi/GPT), cheap bulk work |
+| `delegate-bulk` | Delegate high-volume, low-intelligence grunt work to a cheap model |
+| `delegate-image` | Generate an image via a panel of top image models, critiqued by independent AI judges |
+| `delegate-private` | Delegate work on private data to a local on-device model that never leaves the machine |
+| `delegate-review` | Get an independent second-opinion code review from a different model lineage |
+| `delegate-sec` | Delegate deep security analysis and fixes to GLM |
 | `go-team` | Run a crew of parallel agents on a project — dispatch, verify behaviourally, gate, merge |
 | `hello-world` | A simple test greeting skill |
 | `project-setup` | Walk through project setup improvements for AI-assisted development |
