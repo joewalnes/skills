@@ -26,39 +26,26 @@ Only Google Gemini models actually generate images on OpenRouter — GPT Sol/Ter
 
 `google/gemini-3.1-flash-lite-image` was dropped — it ranked last on all 4 test prompts despite being cheapest. Price didn't track quality in this test; Pro's higher detail didn't reliably beat Flash.
 
-## Step 1 — generate the panel
+## Execution — one Agent call, one clean response
 
-```bash
-python3 <skill-dir>/scripts/image-panel.py "<detailed prompt>" <output-dir>
+Treat this skill like a function call: the user invokes it and expects **3 images + 2 quick critiques back in a single response**, not a play-by-play. All the mechanics (generation, judging, retries, sanity-checking judges) happen inside **one Agent tool call** (default general-purpose agent). The Agent call runs asynchronously and returns via a task-notification, not inline — so after dispatching it, say nothing further and just wait. Don't narrate intermediate steps, don't use ScheduleWakeup or poll for progress, don't send an interim "generating now" message. The single notification that arrives when it finishes is your cue to write the one final reply.
+
+Dispatch a single Agent call with a fully self-contained prompt (the subagent starts with zero context), something like:
+
+```
+Generate an image panel for: "<prompt, expanded from the user's ask: subject, style, composition, background, lighting>"
+
+1. Run `python3 <skill-dir>/scripts/image-panel.py "<prompt>" <output-dir>` — generates flash.png, nano-banana.png, pro.png in parallel (~30-120s).
+2. Run two independent judge critiques SEQUENTIALLY (not in parallel — concurrent calls to the same model can trip OpenRouter's credit hold):
+   cd <output-dir> && pi -p --no-tools --no-session --provider openrouter --model moonshotai/kimi-k2.5 -- @flash.png @nano-banana.png @pro.png "These 3 images (in order: flash, nano-banana, pro) were each generated from the same prompt: '<prompt>'. For each, give a 1-sentence critique, then pick your favorite with a 1-sentence reason."
+   ...then the same with --model z-ai/glm-4.6v.
+   Before trusting either judge, confirm it actually has vision (`pi --list-models <name>` shows `images: yes`) and that its critique cites specific visual details rather than generic praise or the prompt/filenames restated — a vision-less model will fabricate a plausible-sounding critique instead of erroring (seen with kimi-k2-thinking). If a judge 402s ("requires more credits, or fewer max_tokens"), retry it alone, or swap to a smaller-max-output vision model (check the `max-out` column in `pi --list-models`).
+3. Send all 3 images to the user via SendUserFile (display: render), one call, brief caption.
+4. Return ONLY: each judge's pick + 1-sentence reason, your own 1-sentence recommendation, and total cost (sum from panel-manifest.txt). No step-by-step narration, no manifest dumps. If any image is a photorealistic depiction of a real identifiable person, say so in one line and note it wasn't published anywhere shareable.
 ```
 
-Runs all 3 models in parallel, saves `flash.png`, `nano-banana.png`, `pro.png` into `<output-dir>`, and writes `panel-manifest.txt` with per-model cost (via OpenRouter's usage accounting — no guessing at list prices). Takes 30–120s; use a generous Bash timeout.
+To edit/reference an existing image instead of a fresh panel, skip the Agent dispatch and call `scripts/generate-image.py` directly with `-i input.png` on a single model — that's a quick single call, not worth delegating.
 
-Write the prompt yourself, expanded from the user's ask: subject, style, composition, background, lighting. To edit/reference an existing image, use `scripts/generate-image.py` directly on a single model with `-i input.png` (the panel script doesn't support image input).
+## After the Agent returns
 
-## Step 2 — two independent judges
-
-Use two vision-capable models from **different lineages than the generators** (both Google) and from each other, so critiques aren't circular. Defaults, chosen for small max-output (avoids OpenRouter's per-request credit-hold rejecting the call on a constrained daily limit — less of a concern now that the user has topped up credits, but still fine defaults):
-
-```bash
-cd <output-dir> && pi -p --no-tools --no-session --provider openrouter --model moonshotai/kimi-k2.5 \
-  -- @flash.png @nano-banana.png @pro.png \
-  "These 3 images (in the order: flash, nano-banana, pro) were each generated from the same prompt: '<prompt>'. For each, give a 1-sentence critique, then pick your favorite with a 1-sentence reason."
-```
-
-```bash
-cd <output-dir> && pi -p --no-tools --no-session --provider openrouter --model z-ai/glm-4.6v \
-  -- @flash.png @nano-banana.png @pro.png \
-  "These 3 images (in the order: flash, nano-banana, pro) were each generated from the same prompt: '<prompt>'. For each, give a 1-sentence critique, then pick your favorite with a 1-sentence reason."
-```
-
-Run these sequentially, not in parallel — concurrent calls to the same model can trip OpenRouter's per-request credit hold even with balance available (seen in testing: two 131k-max-output calls in flight at once got rejected individually even though neither alone would fail). If a judge call 402s ("requires more credits, or fewer max_tokens"), it's an output-token reservation issue, not an out-of-money one — retry the same call alone, or swap in a model with a smaller max-output (check `pi --list-models <name>`, the `max-out` column).
-
-**Verify the judge actually looked at the images before trusting it.** A text-only model (no vision) will still return a plausible-sounding critique instead of an error — caught in testing with `kimi-k2-thinking`, which fabricated a critique from the filenames alone. Check `pi --list-models <name>` shows `images: yes` before using a model as a judge, and sanity-check that its critique cites specific visual details (not just generic praise) rather than restating the prompt or filenames back.
-
-## Reporting back
-
-- Send all 3 images to the user with SendUserFile (`display: render`) — don't pick one for them.
-- Report each judge's pick and reasoning, clearly attributed by model name.
-- Give your own read too: which fits the user's actual use case (e.g. Pro tends to win on logos/icons; Flash tends to win on photorealistic scenes — but check this per-prompt, don't just default to the table above).
-- **Photorealistic images of real, identifiable people**: flag this explicitly. These can be strikingly convincing, including fabricated real-world details (signage, brands). Don't include them in a published Artifact or anything shareable — send as plain files only, and note they're synthetic.
+Relay its result in **one short message**: which model each judge picked and why (one line each), your own take, and the cost — that's it. Don't re-explain the roster, the judge mechanics, or repeat what's already visible in the sent images.
