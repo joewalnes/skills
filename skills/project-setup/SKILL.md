@@ -239,7 +239,7 @@ Don't just apologize — fix the system.
 
 ---
 
-### 10. Multiple Request Organization
+### 11. Multiple Request Organization
 
 **Pitch:** Allow user to batch up ideas and braindump quickly, but Claude to work through in an organized and diligent manner.
 
@@ -264,6 +264,33 @@ Anti-patterns to avoid:
 ```
 ---
 
+### 12. Unattended Agent Permissions
+
+**Pitch:** An overnight agent run that hits a permission prompt at minute three sits there until morning. The work isn't hard — it's just waiting on a keypress nobody is awake to make.
+
+Check `.claude/settings.json` for a `permissions` block covering the commands this project's own build, test, and run recipe actually invokes. A global baseline in `~/.claude/settings.json` covers common tooling (cargo, npm, go, make, git); this step is about the project-specific commands that baseline can't know about — a custom script, an unusual test runner, a device harness.
+
+Derive the list rather than guessing: read the build/test commands out of the project's `Makefile`, `package.json` scripts, `CONTRIBUTING.md`, or CI workflow, and allow those.
+
+```json
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(./scripts/e2e.sh:*)",
+      "Bash(<this project's test runner>:*)"
+    ]
+  }
+}
+```
+
+Two things worth flagging when you suggest this:
+
+- **Don't allow `git push` globally.** Whether an agent may push is a per-project autonomy decision (see `/go-team`'s autonomy policy), not a blanket default. Add it to a project's allowlist only when the human has said that project's agents may push.
+- **A `PreToolUse` hook that exits non-zero blocks the call.** That's correct for a guard (a personal-data or shared-checkout guard should block), but check the project doesn't have one that blocks on something an agent will legitimately hit all night.
+
+---
+
 ## Status Check
 
 When invoked with `status`, read the project's `CLAUDE.md` and check which of the above are already in place. Present a simple checklist:
@@ -281,9 +308,10 @@ Project setup status:
   [x] Keep README current — rule in CLAUDE.md
   [ ] Encode preferences — not mentioned
   [x] Mistake retrospectives — rule in CLAUDE.md
-  [ ] Multiple Request Organization - not mentioned
+  [ ] Multiple Request Organization — not mentioned
+  [ ] Unattended agent permissions — no .claude/settings.json allowlist
 
-6/10 adopted. Want to add any of the missing ones?
+6/12 adopted. Want to add any of the missing ones?
 ```
 
 ## Guidelines
