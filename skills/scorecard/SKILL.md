@@ -22,7 +22,10 @@ Perform a comprehensive, critical third-party audit of a codebase and produce a 
 /scorecard                    # Full codebase audit of current directory
 /scorecard src/               # Audit specific directory
 /scorecard --quick            # Abbreviated audit (summary table only)
+/scorecard --agents           # Agent-readiness audit only (second table, skip the code grades)
 ```
+
+A full run produces **two** grades: one for the code, one for agent-readiness. They answer different questions for different audiences, so they get separate tables and separate overall marks — `Code: B / Agent-readiness: C+`.
 
 ## Analysis Process
 
@@ -84,6 +87,15 @@ Launch these investigations simultaneously using the Task tool with subagent_typ
 - Look for missing debouncing, throttling, or pagination
 - Catalog all duplicated code patterns with specific locations
 - Identify abstractions that should exist but don't
+
+**Agent 6 — Agent Readiness:**
+- Read the agent-facing instructions (`CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`) and check **every factual claim** against the code — stale rules are the finding, not the absence of rules
+- Find the work queue. Is it ranked? Are there duplicate or dangling entry numbers? Are the owner's own requests distinguishable from machine-generated ones?
+- Find the verification recipe. Run it. Does it work *right now*? How many environments does it cover?
+- Hunt vacuous gates: for every test threshold and CI check, ask what input would make it fail. Report each one that has no answer
+- Look for thresholds set just above a measured failure rate, tests whose names promise more than their assertions deliver, and tests loosened to accommodate a bug
+- Check isolation: worktrees, ports, shared machine-wide singletons (devices, session pools, databases, keychains), whether production is guard-blocked, and whether real credentials or personal data are reachable from an ordinary task
+- Check whether lessons are recorded anywhere, and whether the same mistake recurs in the history
 
 ### Phase 2: Grading
 
@@ -195,6 +207,84 @@ Is the repository clean, well-organized, and professional?
 - **C**: Some junk files, messy history, incomplete .gitignore
 - **D**: Significant clutter, broken CI, no .gitignore
 - **F**: Repository is a mess
+
+---
+
+## Agent-Readiness Dimensions
+
+A second, separate table. The 13 dimensions above grade the code. These grade whether **an agent could work here unattended for eight hours without a human** — a different question, and increasingly the one that determines throughput.
+
+Grade these even on a project that has never been worked on by agents; the answer tells the owner what it would cost to start. Skip the whole table only if the user asks for `--quick`.
+
+### A1. Tracking & Priorities (Weight: High)
+Is there a work queue an agent can read, rank, and update without guessing?
+- **A**: Tracker exists and is prioritised; the human's own direct requests are tracked *separately* and ranked above machine-found work; no duplicate or dangling entry numbers; stale entries pruned
+- **B**: Good tracker, minor staleness, human requests not separated but not being buried either
+- **C**: Tracker exists but is unranked or has grown past the point of being readable; human requests compete on equal footing with machine-generated items
+- **D**: Inline `TODO:` comments only, or a tracker nobody updates
+- **F**: No queue — an agent has nothing to pull from
+
+*Check for:* duplicate heading numbers, references pointing at renumbered or deleted entries, entries marked done that aren't, and whether anything distinguishes "the owner asked for this" from "an agent found this."
+
+### A2. Verifiability (Weight: High)
+Can an agent confirm a change works, by driving the real thing?
+- **A**: A documented recipe for exercising the product end to end (drive the UI, run the binary, curl the endpoint), it works right now, and it covers more than one environment
+- **B**: Recipe exists and works, single environment
+- **C**: Tests only — nothing that exercises the assembled product; an agent must infer that a feature works from unit coverage
+- **D**: Tests are slow, manual, or partly broken; no path from "code changed" to "product works"
+- **F**: No way to verify anything without a human
+
+*This is the highest-leverage dimension.* Without it, everything merges on the strength of reports.
+
+*Check for:* a harness that only ever runs in one configuration (one origin, one screen size, one locale) — that makes an entire class of bug structurally invisible.
+
+### A3. Guard Integrity (Weight: High)
+Do the project's own checks actually fail when something is wrong?
+- **A**: Gates are meaningful and proven; thresholds derived from requirements; CI enforces architectural invariants, not just lint
+- **B**: Solid gates, one or two soft thresholds
+- **C**: Some gates cannot fail as written, or thresholds are set just above a measured failure rate — enshrining the failure rather than fixing it
+- **D**: Tests pass when the code is broken; assertions check log messages rather than behaviour
+- **F**: Green means nothing
+
+*Actively hunt vacuous gates.* For each one ask: **what input would make this fail?** Report every gate with no answer. Also flag tests whose names promise more than their assertions deliver, and any test loosened to accommodate a known bug.
+
+### A4. Isolation & Safety (Weight: High)
+Can several agents work at once without corrupting each other or the owner's real data?
+- **A**: Worktree-per-agent is the norm; machine-wide shared singletons (devices, session pools, ports, databases, keychains) are documented with collision-avoidance; production is explicitly guard-blocked; credentials and personal data never enter agent context
+- **B**: Good isolation, shared resources undocumented but not currently colliding
+- **C**: Agents share a checkout or a device; collisions happen and get misdiagnosed as product bugs
+- **D**: No isolation; real credentials or personal data reachable from a normal task
+- **F**: An agent can destroy the owner's production data by following instructions
+
+*Security-style rule: if agents can reach production data or credentials, this cannot be graded above C.*
+
+### A5. Knowledge Capture (Weight: Medium)
+Does the project remember what it learned, and does the learning escape the project?
+- **A**: Lessons recorded with cost and cause; generalisable ones promoted into shared tooling; existing lessons sharpened rather than duplicated; instructions to agents match what the code actually does
+- **B**: Good diary or lessons file, slightly behind
+- **C**: Lessons live only in commit messages and issue threads; the same mistake is re-learned
+- **D**: Agent instructions (`CLAUDE.md` and similar) contradict the code — **stale rules are worse than none**, because they are trusted
+- **F**: Nothing recorded
+
+*Check every factual claim in the agent-facing instructions against the code.* A rule stated as absolute with an undocumented exception is a finding: readers trust it and audit against it.
+
+---
+
+## Output Format for Agent-Readiness
+
+```
+| #  | Dimension            | Grade | Key Finding |
+|----|----------------------|-------|-------------|
+| A1 | Tracking & Priorities| C     | 134 entries, 3 references point at a renumbered item |
+| A2 | Verifiability        | B+    | Real device harness; only ever driven from one origin |
+| A3 | Guard Integrity      | C-    | A documented gate does not exist in code; one suite cannot fail |
+| A4 | Isolation & Safety   | B     | Worktrees used; shared device collisions misread as page bugs |
+| A5 | Knowledge Capture    | B-    | Excellent lessons in code comments, not propagated to docs |
+
+**Agent-Readiness: C+**
+```
+
+Then, in the detailed report, add one section: **"What would break first in an unattended run"** — the single change that would most increase how long agents can work here without a human. Be concrete and name the file.
 
 ## Output Format
 
