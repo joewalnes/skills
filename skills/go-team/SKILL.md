@@ -77,7 +77,25 @@ Run it on a loop (`/loop /go-team`) for unattended operation.
 
 ## Phase 0 — Preflight
 
-**Read the project's `CLAUDE.md` first.** It carries the per-project configuration this skill depends on. Look for a `## Agent operations` section containing:
+**Everything in this phase belongs to the minutes while the human is still awake.** The fleet exists for the hours after they walk away, and a question asked in those hours costs the entire remainder of the run — not the two minutes it takes to answer. Front-load every question here, or proceed without asking at all.
+
+The governing asymmetry: **it is always worth interrupting to prevent an eight-hour stall, and never worth interrupting to avoid a two-minute one.**
+
+### 0a. Unattended readiness — check this before anything else
+
+Confirm the fleet can actually act without a prompt. This is the most common way an overnight run dies — not a crash, not a bad merge, but five agents parked behind a permission dialog at minute three while the human sleeps.
+
+Check the project's `.claude/settings.json` (and `~/.claude/settings.json`):
+
+- **`permissions.defaultMode`** — `acceptEdits` at minimum. The plain default prompts on every write, which is every agent, constantly.
+- **`permissions.allow`** — must cover the commands the verification recipe actually invokes. Read the recipe, list its binaries (`cargo build`, `npm test`, `git commit`, whatever it is), and confirm each appears. A recipe the fleet cannot run unprompted is not a recipe.
+- **Blocking hooks** — a `PreToolUse` hook that exits non-zero halts the call. That is correct for a guard and fatal for anything interactive.
+
+**If something is missing and the human is here, say so now and offer the fix** — this is a one-line settings edit, not a project. **If they are already gone** (an unattended `/loop` fired this), do not stall: run anyway and report the gap in the first digest.
+
+### 0b. The project's configuration
+
+**Read the project's `CLAUDE.md`.** It carries the per-project configuration this skill depends on. Look for a `## Agent operations` section containing:
 
 - **Verification recipe** — how to drive the real thing (not just run tests)
 - **Autonomy policy** — merge-and-push, or merge-locally-only
@@ -86,15 +104,17 @@ Run it on a loop (`/loop /go-team`) for unattended operation.
 - **Requests lane** — path to the file holding the human's own asks (default `ASKS.md`)
 - **Setup version** — the `project-setup` version this project has adopted
 
-**If that section is missing, stop and run `/project-setup` first.** Do not improvise the scaffolding. Without a verification recipe the central rule of this skill — verify behaviourally before merging — has nothing to stand on, and you will fall back to trusting reports, which is the failure this skill exists to prevent.
+**If that section is missing and the human is present, run `/project-setup` first.** Do not improvise the scaffolding. Without a verification recipe the central rule of this skill — verify behaviourally before merging — has nothing to stand on, and you will fall back to trusting reports, which is the failure this skill exists to prevent.
 
-**If the setup version is behind the current `project-setup`,** offer the delta before starting. This is how a project inherits what other projects learned.
+**If that section is missing and the human is gone, do not stop.** Run a reduced fleet on work whose deliverable is a *report* rather than a merge: adversarial hunts, audits, `/scorecard` runs, findings written to the tracker. Merge nothing — without a recipe you cannot honour the verification rule, and merging on reports is the exact failure this skill prevents. Say plainly in the first digest that the run was scope-limited and why. Eight hours of findings beats eight hours of a stopped fleet holding a question.
+
+**If the setup version is behind the current `project-setup`,** offer the delta if the human is present; note it in the digest and carry on if not.
 
 **On the first run** (`/go-team start`), confirm with the human:
 - agent count (**default 5**) and the cost implication
 - autonomy: push to remote, or merge locally only
 
-Record both in `CLAUDE.md` so you never ask twice.
+Record both in `CLAUDE.md` so you never ask twice. `start` is an attended command by design — if an unattended run hits an unconfigured project, take the defaults (5 agents, merge-locally-only: the safer half of each choice) and report that you did rather than waiting to be told.
 
 ---
 
@@ -109,6 +129,8 @@ Read the requests file (`ASKS.md` or whatever `CLAUDE.md` names). **One agent mu
 This rule is not decoration. On the project where it was learned, a feature the human had designed and personally approved sat unbuilt for twelve hours while agents fixed bugs *in the surface it was meant to replace* — including three bugs that only existed because the replacement hadn't landed. The backlog had grown to 120 machine-generated entries and the human's own request ranked equal with the fifth variant of a bug an agent found. Nothing was tracking that it hadn't happened.
 
 Machine-generated work will always outnumber human requests. Rank by origin, not by volume.
+
+**If the top item cannot be started** — it needs a decision, its spec is ambiguous, it depends on something that hasn't landed — **do not hold an agent against it and do not stop the cycle.** Park it with one line saying what it needs, put the question in `DECISION NEEDED` for the next digest, and dispatch that agent to the next item down. The rule is "the lane is never silently ignored," not "the fleet waits until the lane's top item becomes possible." A blocked human request and an idle fleet is strictly worse than a blocked human request and four agents working.
 
 ### 2. Count live agents; dispatch to the target
 
@@ -153,6 +175,21 @@ Call `/sitrep`, and add two things it does not cover:
 - **What you did *not* do.** Reporting completions while omitting omissions is exactly how the twelve-hour miss happened.
 
 If everything is healthy, the crew is full, and the lane is covered, say so in one line and stop. A quiet tick needs no narration.
+
+---
+
+## Blocked work must never block the fleet
+
+An unattended run has one failure mode that looks exactly like success: nothing is broken, no agent has crashed, and no work is happening because something is waiting for an answer nobody is awake to give. The human wakes to a green status and an empty night.
+
+In order of importance:
+
+1. **A blocked item parks; its agent redispatches.** Never hold an agent idle against a question. Write down the blocker, move that agent to the next available work, raise the question in `DECISION NEEDED` for the next digest.
+2. **Never ask what you can safely assume.** If a choice is reversible and one option is clearly the conservative one, take it and report the assumption. Reserve `DECISION NEEDED` for product principles and irreversible calls — where being wrong costs more than a night of throughput.
+3. **Prefer a reduced-scope run to a stopped one.** Missing recipe, missing permission, ambiguous spec: there is nearly always adjacent work — hunts, audits, tests, findings — that needs none of the missing thing.
+4. **Nothing here is a stop condition except the gate.** The gate refuses to merge, and it should; that is the one place where stopping is the correct answer. Everything else degrades instead: fewer agents, narrower scope, report-only. A refusing gate still leaves the rest of the crew working.
+
+The morning test is not "was each stall legitimate?" — each one usually is. It is **"was there anything else the fleet could have been doing?"** There almost always was.
 
 ---
 
