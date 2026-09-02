@@ -97,6 +97,22 @@ Launch these investigations simultaneously using the Task tool with subagent_typ
 - Check isolation: worktrees, ports, shared machine-wide singletons (devices, session pools, databases, keychains), whether production is guard-blocked, and whether real credentials or personal data are reachable from an ordinary task
 - Check whether lessons are recorded anywhere, and whether the same mistake recurs in the history
 
+### Phase 1.5: External Security Cross-Check (best-effort)
+
+Alongside Agent 3, attempt an independent second opinion from a different model via the `delegate-security-audit` skill. This exists because a single model — including Claude auditing its own analysis — misses classes of vulnerabilities another model catches, and Claude's own guardrails limit how adversarially it will probe certain code. Treat this as strictly additive: if it's unavailable, the scorecard proceeds on Agent 3 alone.
+
+**Check availability first; skip silently if unavailable:**
+
+```bash
+command -v pi >/dev/null && pi auth check --provider openrouter --no-refresh >/dev/null 2>&1 && echo available
+```
+
+If `pi` isn't installed, or the OpenRouter credential check fails, don't attempt the delegation — proceed with Agent 3's findings alone and note in the report: "External security cross-check skipped (delegate-security-audit unavailable: `pi` not installed / OpenRouter not authenticated)." Never block or fail the scorecard over this being unavailable.
+
+**If available**, invoke the `delegate-security-audit` skill (via the Skill tool) for guidance, but override its default behavior for this context: **scorecard is a read-only grading tool**, so brief GLM explicitly not to modify any files, and run its `pi` command with `--exclude-tools edit,write` appended (the same read-only pattern `delegate-review` uses) regardless of what that skill's own example shows — a grading pass must never leave code changes behind as a side effect. Give it the same scope Agent 3 covers (shell execution patterns, path traversal/symlink/TOCTOU, injection, hardcoded secrets, unsafe deserialization, predictable randomness in security contexts) and ask for a report — findings with file:line and severity, not fixes. Run it in the background (`run_in_background`) while the other Phase 1 agents work, since it can take several minutes; this costs real money, which is expected for a periodic scorecard run per CLAUDE.md, but don't loop it.
+
+Fold its findings into Agent 3's before grading, tagging each with its source. Where the two disagree on severity, or one surfaces something the other missed, note the discrepancy in the report rather than silently picking one — the disagreement itself is signal.
+
 ### Phase 2: Grading
 
 After all agents complete, synthesize findings into grades. Be honest and critical. A "B" should mean genuinely good code, not "I didn't look hard enough to find problems."
@@ -128,7 +144,7 @@ Are patterns, naming, and conventions uniform across the codebase?
 - **F**: Every file looks like it was written by a different person
 
 ### 4. Security (Weight: High)
-Are there vulnerabilities? Is the threat model appropriate?
+Are there vulnerabilities? Is the threat model appropriate? Grade from the combined findings of Agent 3 and the external cross-check (Phase 1.5), when the latter ran — tag each finding with its source (`[Agent 3]` / `[GLM]`) in the Critical Issues list.
 - **A**: No vulnerabilities found, proper input validation, secure defaults, documented threat model
 - **B**: Minor gaps but no exploitable issues, good practices overall
 - **C**: Some risks that need attention (e.g., unsanitized input in non-critical paths)
