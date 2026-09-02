@@ -46,7 +46,7 @@ make list       # Show available skills and install status
 | `delegate-image` | Generate an image via a panel of top image models, critiqued by independent AI judges |
 | `delegate-private` | Delegate work on private data to a local on-device model that never leaves the machine |
 | `delegate-review` | Get an independent second-opinion code review from a different model lineage |
-| `delegate-sec` | Delegate deep security analysis and fixes to GLM |
+| `delegate-security-audit` | Delegate deep security analysis and fixes to GLM |
 | `go-team` | Run a crew of parallel agents on a project — dispatch, verify behaviourally, gate, merge |
 | `hello-world` | A simple test greeting skill |
 | `project-setup` | Walk through project setup improvements for AI-assisted development |
