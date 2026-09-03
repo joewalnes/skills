@@ -17,7 +17,9 @@ Run these in parallel:
 3. `git log --oneline -5` — recent commits for context
 4. `git stash list` — anything stashed
 5. **`ListAgents`** — background agents and other sessions (see below)
-6. Scan the conversation history you have in context for what was last discussed
+6. `python3 ~/.claude/skills/request/scripts/request.py inbox` and `… sent` — work other projects have asked of this one, and what this one is waiting on elsewhere (skip silently if the script isn't installed)
+7. `ASKS.md` (or whatever `CLAUDE.md` names as the requests lane), if present — the human's own top open ask
+8. Scan the conversation history you have in context for what was last discussed
 
 ### Reading the agent roster
 
@@ -67,6 +69,10 @@ Use this structure. **Omit any section that's empty.** Keep each section to 1–
 
 **In progress:** What we were working on and how far we got.
 
+**Your lane:** The top open item in `ASKS.md` and its status — is anyone on it? Omit if the project has no requests lane.
+
+**Inbox:** Requests from other projects (`request.py inbox`): count, and the blocking ones by title. **Sent:** what this project is waiting on elsewhere, and anything that turned `done` since last time (with its ref). Omit either when empty.
+
 **Background:** Agents/sessions currently working, one line each — name and what it's on. Collapse idle/offline ones to counts. Note anything that finished since the last check.
 
 **Uncommitted changes:** Brief summary of dirty files — group by intent (e.g. "new feature in X, test updates in Y") not just file names.
@@ -74,6 +80,8 @@ Use this structure. **Omit any section that's empty.** Keep each section to 1–
 **Todos:** Open tasks from this session (from conversation context).
 
 **Gaps:** Things that look unfinished — e.g. TODO/FIXME/HACK added this session, temp debug code, tests that were skipped or commented out, docs not updated to match code changes, half-done refactors.
+
+**Not done:** What was explicitly skipped, deferred, or left out this session, and why — the omissions list. Reporting completions while omitting omissions is how a designed-and-approved feature once sat unbuilt for twelve hours.
 
 **Next steps:** 1–3 concrete actions to resume work.
 ```
