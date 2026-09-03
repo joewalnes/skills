@@ -224,6 +224,14 @@ Is the repository clean, well-organized, and professional?
 - **D**: Significant clutter, broken CI, no .gitignore
 - **F**: Repository is a mess
 
+### 14. Accretion (Weight: Medium)
+Is the codebase being folded back as it grows, or only added to? This is a *trend* — the other thirteen grade the tree as it stands; this grades its direction. Run `/slop --quick` and report its grade; that skill owns the method (articulability and surface area decide; history is evidence; smells only annotate). DRY (#6) measures duplication *present*; this measures whether duplication and size are being *removed*. Fix commits that delete nothing, fix-of-a-fix chains in one file, a refactor share near zero, and a tracker that only grows are the signals.
+- **A**: Surface area flat or shrinking over the window; refactoring visibly happening; fixes name causes and delete something
+- **B**: Mostly chosen; occasional additive fix or unexplained growth
+- **C**: Accreting — production add:delete climbing, refactor share near zero, god files growing
+- **D**: Sediment — fix-of-a-fix chains, nobody can say why half of it is there
+- **F**: Dead in Naur's sense: modifiable, but not well
+
 ---
 
 ## Agent-Readiness Dimensions
@@ -252,7 +260,7 @@ Can an agent confirm a change works, by driving the real thing?
 
 *This is the highest-leverage dimension.* Without it, everything merges on the strength of reports.
 
-*Check for:* a harness that only ever runs in one configuration (one origin, one screen size, one locale) — that makes an entire class of bug structurally invisible.
+*Check for:* a harness that only ever runs in one configuration (one origin, one screen size, one locale) — that makes an entire class of bug structurally invisible. And **can the fixtures exhibit the properties their tests assert?** A corpus that alternates authors so a multi-revision session is unreachable by construction, two rounds with byte-identical images so "image changed" can never fire, a field the real API never returns — construct the failing case by hand and confirm the fixture could produce it.
 
 ### A3. Guard Integrity (Weight: High)
 Do the project's own checks actually fail when something is wrong?
@@ -264,6 +272,8 @@ Do the project's own checks actually fail when something is wrong?
 
 *Actively hunt vacuous gates.* For each one ask: **what input would make this fail?** Report every gate with no answer. Also flag tests whose names promise more than their assertions deliver, and any test loosened to accommodate a known bug.
 
+*Check for:* **a verdict-file mechanism** — does the check tool write instrument exit codes and the HEAD it ran at somewhere a merge path can read *instead of the worker's report*? Workers have reported "clean build" over a machine-readable refusal; a project whose only record of a check is the agent's say-so cannot grade above C here. And **every predicate ships with the case that must not trigger it** — a rule tested only on the input its author wrote is unproven.
+
 ### A4. Isolation & Safety (Weight: High)
 Can several agents work at once without corrupting each other or the owner's real data?
 - **A**: Worktree-per-agent is the norm; machine-wide shared singletons (devices, session pools, ports, databases, keychains) are documented with collision-avoidance; production is explicitly guard-blocked; credentials and personal data never enter agent context
@@ -273,6 +283,8 @@ Can several agents work at once without corrupting each other or the owner's rea
 - **F**: An agent can destroy the owner's production data by following instructions
 
 *Security-style rule: if agents can reach production data or credentials, this cannot be graded above C.*
+
+*Check for:* **tripwires on global-blast-radius files** — are the few places where any change has global effect (default configs, prompts, ranking loops, abstention gates, the production asset) guarded by a test that fails on content change without an explicit marker? An escalation instruction without one is a wish. And **reversible destructive tooling** — do the project's own reapers, purgers and cleanup scripts quarantine rather than delete, take a required root with no default, and read a liveness signal themselves? A reaper once deleted two live agents' worktrees; a purge script came one guard line from `rm -rf /*`.
 
 ### A5. Knowledge Capture (Weight: Medium)
 Does the project remember what it learned, and does the learning escape the project?
@@ -326,6 +338,7 @@ Then, in the detailed report, add one section: **"What would break first in an u
 | 11| Error Handling    | C+    | Inconsistent user-facing messages |
 | 12| Extensibility     | B     | Good plugin points, tight core coupling |
 | 13| Repo Hygiene      | B-    | Junk files, missing .gitignore entries |
+| 14| Accretion         | C     | Add:delete 7:1 in production code; zero refactor moves in 110 commits |
 
 **Overall: C+**
 ```
