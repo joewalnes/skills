@@ -21,7 +21,16 @@ Run these in parallel:
 
 ### Reading the agent roster
 
-`ListAgents` returns every peer session, agent, and cloud run, each with a **status** — and the status is the whole point:
+`ListAgents` returns every peer session, agent, and cloud run on the machine — across *all* projects. Most of it is noise for this sitrep.
+
+**Scope to this project first.** Take the project name as the basename of the git root (`git rev-parse --show-toplevel`, falling back to the cwd). Keep only:
+
+- subagents spawned by *this* session (always relevant), and
+- sessions whose name, tmux session, or title contains the project name — peer sessions are named after their project directory (`websocketd-9a`, `zepto`), and cloud runs carry a descriptive title.
+
+Drop everything else. A sitrep run in `websocketd` reporting that `sidebrain` is busy is confusing, not informative — the human is here, not there. The one exception: if sessions in *other* projects are `waiting`, add a single trailing line — a count, not a list — e.g. "2 sessions in other projects are waiting on you (`/sitrep` there for detail)". Never enumerate other projects' work.
+
+For the sessions that survive the filter, each has a **status** — and the status is the whole point:
 
 | Status | Means | Report it? |
 |---|---|---|
@@ -35,7 +44,7 @@ A `waiting` session is time that is being *wasted right now* — an agent that h
 
 **Don't message agents to interrogate them.** `SendMessage` interrupts work in progress and turns a glance into a conversation. The session name plus status is normally enough. If the human wants depth on one, offer to follow up on that one.
 
-**Scale matters.** There can easily be 20+ sessions. Never dump the full list — that's the opposite of a glance. Enumerate `waiting` and `busy`; collapse the rest to counts ("9 cloud sessions idle, 5 Remote Control offline").
+**Even within the project, don't enumerate everything.** Enumerate `waiting` and `busy`; collapse `idle`/`offline` to a count.
 
 ### Background tasks in *this* session
 
@@ -79,4 +88,4 @@ Use this structure. **Omit any section that's empty.** Keep each section to 1–
 - If the session is fresh with no history, say so and summarize repo state instead.
 - For gaps, scan `git diff` output for obvious markers: `TODO`, `FIXME`, `HACK`, `console.log`, `debugger`, `binding.pry`, `print(`, commented-out test assertions, `.only` / `.skip` in tests.
 - **Report agent status, don't infer it.** "Still running" means the roster says `busy` — not that you haven't heard otherwise. If a task notified completion earlier in this conversation, it is done. Never guess at or predict a pending agent's results.
-- **Don't let the roster crowd out the repo.** A sitrep in a working directory is still primarily about that directory. Sessions on unrelated projects are context, not the subject — one collapsed line, unless one of them is `waiting`.
+- **Don't let the roster crowd out the repo.** A sitrep in a working directory is about that directory. Other projects' sessions are filtered out entirely (see *Scope to this project first*) — the only thing that crosses over is a one-line count of `waiting` sessions elsewhere.
