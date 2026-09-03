@@ -47,6 +47,8 @@ Filter to open bugs only. Sort by priority (highest first), then by order of app
 
 ## Phase 1: Pre-flight Check
 
+**Work in your own worktree, never the shared checkout.** `git worktree add <path> -b bug-bash/<date> main` and do everything there. Other agents may be working the same repo; the shared checkout is touched only to merge. Never `git stash` — `refs/stash` is shared across every worktree of a repo, and a sibling's `stash pop` can cross-apply into yours. And never edit another project's repository: if a bug's fix belongs in a dependency, file it with `/request` and mark this one blocked.
+
 Before touching any code, verify the project builds and tests pass in its current state.
 
 1. **Identify build/test commands**: Read `Makefile`, `package.json`, `Cargo.toml`, `pyproject.toml`, `build.gradle`, etc. Look for the project's documented build and test commands (often in README, CONTRIBUTING, or CLAUDE.md).
@@ -78,6 +80,8 @@ Before writing any fix, confirm the bug exists:
 - **Write a failing test** that demonstrates the bug, OR
 - **Reproduce interactively** if it's a UI/behavioral issue (use tmux for TUI apps, curl for APIs, etc.), OR
 - **Read the code and confirm** the logical error if the bug is evident from inspection (e.g., wrong variable name, off-by-one)
+
+**Proof of bite.** A test that demonstrates the bug must actually fail against the unfixed code — run it *before* the fix and keep the failure output for the commit message. A guard that was never seen to fail is decoration: several have shipped that would have passed either way. If you prove it by tampering (reverting the fix, swapping in the old file), **commit the fix first** — an agent lost all its work to `git checkout --` mid-tamper — and the tampered build must compile and run, or you've proven nothing. Also write the case that must *not* trigger: a predicate tested only on the input its author wrote is unproven.
 
 If you cannot reproduce the bug or confirm it exists in the current code:
 - It may already be fixed. Check recent commits.
@@ -172,6 +176,9 @@ After all bugs are processed (or the limit is reached), produce a summary:
 ## Skipped Bugs
 - **P2: God object decomposition** — Too large. Fix requires architectural refactor across Editor.pm, Commands.pm, and Palette.pm. Not suitable for a bug bash.
 
+## Not Done
+- [Anything left out of a fix, deliberately or not: the second call site you didn't reach, the edge case you didn't cover, the test you couldn't make fail. An honest omissions list is worth more than the fixes — ask for it explicitly and it arrives; omit it and it never does.]
+
 ## Decisions Made
 - [Any judgment calls you made during the bash, with reasoning]
 
@@ -200,6 +207,7 @@ You are working unassisted. When a decision is required:
 ## Important Safety Rules
 
 - **Never force-push.** Always use regular `git push`.
+- **Never `git stash`, never edit another project's checkout.** See Phase 1.
 - **Never modify git config.** Don't change user.name, user.email, or any git settings.
 - **One commit per bug.** Don't squash or amend across bugs.
 - **Revert on regression.** If your fix breaks something, revert it — don't try to fix the fix.
