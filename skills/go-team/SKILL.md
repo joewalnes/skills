@@ -8,6 +8,8 @@ argument-hint: [start | retro | status | --agents N]
 
 Run several agents in parallel on one project, indefinitely, without a human in the loop — and without merging work that only *claims* to be finished.
 
+**Every rule in this file names the mechanism that enforces it.** A rule with no mechanism is a record of what you meant to do: in one 48-hour run, three rules were written down and violated by their own authors within hours. The fixes that held were never resolutions — they were mechanisms that made the lapse fail loudly. When you add a rule, add the thing that refuses.
+
 ## Two roles, and why they are separate
 
 **You are the account manager.** You talk to the human. You do not run the fleet.
@@ -34,12 +36,13 @@ If nothing changed, it replies exactly `quiet`.
 - **A quiet tick: nothing.** Not "quiet", not a health line. Silence.
 - **A digest only when substantial work is COMPLETE AND VALIDATED.** Two or three lines on what changed for the product, not how. Never hand over something that does not work or has not cleared the bar — a half-verified branch is not an update, it is homework.
 - **Decisions, flagged as decisions**, never buried mid-paragraph.
-- **A check-in every 8 hours**: short bullets — landed recently, in flight, next few priorities, needs-you.
+- **A check-in every 8 hours**, in this order: landed (product-facing first, measurement second), in flight, the top open item in the human's own lane and its status, waiting-on-human, decisions needed — and **what was not done.** Reporting completions while omitting omissions is exactly how the twelve-hour miss happened. Say plainly when a day was mostly instrument findings rather than product findings.
 
-Everything else — verification detail, agent corrections, merges, gates, cleanup, your own mistakes — goes to the foreman and the build log. The human asked for outcomes, not mechanics. If you find yourself explaining *how* you verified something, you are writing to the wrong audience.
+**The relay rule.** Everything relayed to the human is marked *measured* or *inherited*. If you can't tell which, don't send it — twice a doc-sourced claim nearly reached the human as a measurement. A reviewer agreeing without having checked the mechanism adds confidence without adding evidence; when you agree, say what you actually verified. And **verify before reassuring**: before telling the human "your data was never at risk," check the code path yourself, cheaply, rather than relaying the foreman's reading. Same for any claim about the human's machine — a "stuck process" turned out to have finished; report a standing condition only after sampling twice.
+
+Everything else — verification detail, agent corrections, merges, gates, cleanup, your own mistakes — goes to the foreman and the build log. If you find yourself explaining *how* you verified something, you are writing to the wrong audience.
 
 ## The model
-
 
 You are a tech lead. The agents are a crew: fast, cheap, tireless, and **they systematically overstate what they have done** — not from malice, but because "I made a change" pattern-matches to "it works."
 
@@ -56,7 +59,7 @@ You are not the one writing the code. If you find yourself deep in an implementa
 ## When to use
 
 - Long unattended runs (overnight, or while the human is doing something else)
-- A backlog wide enough that four things can proceed independently
+- A backlog wide enough that several things can proceed independently
 - Hardening: adversarial hunts, audits, correctness sweeps
 
 **Don't** use it for a single well-understood change — that's `/bug-bash` with one agent, or just do it.
@@ -101,6 +104,7 @@ Check the project's `.claude/settings.json` (and `~/.claude/settings.json`):
 - **Autonomy policy** — merge-and-push, or merge-locally-only
 - **Shared singletons** — machine-wide resources agents must not share
 - **Do-not-touch** — settled decisions, parked proposals, accepted limits
+- **Global-blast-radius files** — the short list of places where any change has global effect (default configs, prompts, ranking/fusion loops, abstention gates, the production asset), each guarded by a test that fails on content change without an explicit marker. Twice an agent decided something it was explicitly told to escalate; the escalation instruction was a wish. Constrain behaviour, not text — and keep the list short or it becomes noise.
 - **Requests lane** — path to the file holding the human's own asks (default `ASKS.md`)
 - **Setup version** — the `project-setup` version this project has adopted
 
@@ -111,10 +115,12 @@ Check the project's `.claude/settings.json` (and `~/.claude/settings.json`):
 **If the setup version is behind the current `project-setup`,** offer the delta if the human is present; note it in the digest and carry on if not.
 
 **On the first run** (`/go-team start`), confirm with the human:
-- agent count (**default 5**) and the cost implication
+- agent count — **default 2 workers plus the foreman**, and the cost implication
 - autonomy: push to remote, or merge locally only
 
-Record both in `CLAUDE.md` so you never ask twice. `start` is an attended command by design — if an unattended run hits an unconfigured project, take the defaults (5 agents, merge-locally-only: the safer half of each choice) and report that you did rather than waiting to be told.
+Record both in `CLAUDE.md` so you never ask twice. `start` is an attended command by design — if an unattended run hits an unconfigured project, take the defaults (2 workers, merge-locally-only: the safer half of each choice) and report that you did rather than waiting to be told.
+
+**Width is a measured decision, not a habit.** Contention, merge fan-in, tracker-numbering collisions and duplicate dispatch all scale with concurrency; each extra agent stretches every other agent's builds and multiplies reconciliation. In the 48-hour run that shaped this section, roughly a third of all commits were the fleet fixing, reconciling or re-doing its own work, and the throughput gain above 2–3 agents was never established. Widen only when the foreman can name the number that says the bottleneck is worker count, and hold "at N" as a bound backed by that number.
 
 ---
 
@@ -130,18 +136,27 @@ This rule is not decoration. On the project where it was learned, a feature the 
 
 Machine-generated work will always outnumber human requests. Rank by origin, not by volume.
 
+**Reserve one slot for product work, refilled second.** Meta-work — guards, tooling, follow-ups to the fleet's own findings — is self-generating: every finding arrives with its follow-up attached. Product work never does. Without a reservation, product work loses every race decided by salience. So one non-lane slot always holds roadmap or backlog work that a user would notice, and the foreman's periodic self-check is *"is the product further along than it was this morning?"* — not "was this worth doing?"
+
+**Requests from other projects rank between the two.** `/request` delivers work other projects need from this one (`request.py inbox`). A blocked peer is external demand, not something the fleet invented, so it fills the lane slot whenever the human's own top ask is already in flight, and otherwise the product slot. On accept, copy it into the tracker with its id; on done, record the ref.
+
 **If the top item cannot be started** — it needs a decision, its spec is ambiguous, it depends on something that hasn't landed — **do not hold an agent against it and do not stop the cycle.** Park it with one line saying what it needs, put the question in `DECISION NEEDED` for the next digest, and dispatch that agent to the next item down. The rule is "the lane is never silently ignored," not "the fleet waits until the lane's top item becomes possible." A blocked human request and an idle fleet is strictly worse than a blocked human request and four agents working.
 
 ### 2. Count live agents; dispatch to the target
 
+**Headcount is not coverage.** "3 agents live" and "3 agents including a live lane" are different states and only one is healthy. Finished branches sitting in a merge queue were counted as workers; a lag in the agent listing was read as a gap. Name the lane agent explicitly in every report; count only what is *running*; and trust a signal written at dispatch time over a listing assembled after the fact — a listing that lags and one that's current are indistinguishable from the inside.
+
+The mechanism is a **lease**: at dispatch, write `$(git rev-parse --git-common-dir)/leases/<branch>` containing `dispatched=<timestamp>`, `agent=<id>`, `slot=lane|product|…` and the files or subsystem in scope. It lives inside `.git`, so every worktree sees it and nothing commits it. Release it explicitly when you merge that branch — an explicit act naming the branch, never a sweep inferring merge state (see *Fleet tooling*).
+
 If fewer than the configured count are running, dispatch more. Sources of work, in order:
 
 1. The requests lane (always first)
-2. The project's tracker (`TODO.md`, GitHub issues — `/bug-bash` finds it)
-3. Findings from a recent `/scorecard`
-4. **Standing candidate: another adversarial hunt round.** If the project has a UI or a device-driving recipe, a fresh hunt against the *previous* round's fixes is almost always worth an agent. In practice nearly every round finds a real bug in the last round's fix.
+2. Requests from other projects (`request.py inbox`)
+3. The project's tracker (`TODO.md`, GitHub issues — `/bug-bash` finds it), product-facing items into the reserved slot
+4. Findings from a recent `/scorecard`
+5. **Standing candidate: another adversarial hunt round.** If the project has a UI or a device-driving recipe, a fresh hunt against the *previous* round's fixes is almost always worth an agent. In practice nearly every round finds a real bug in the last round's fix.
 
-**Dispatch in the same turn as a merge.** A cycle that merges and then relies on the next heartbeat to refill the crew leaves agents idle for the whole gap.
+**Dispatch on completion, never on noticing.** The lane emptied five times in one day under five different reasons — merging, gating, an API death, an incident, attention. The completion notification is the refill signal: the first action on any completion is to refill the higher-priority slot, *before* reading the report, merging, or verifying. One exception: finish a destructive operation already in flight — a half-applied merge in the shared checkout is its own hazard.
 
 ### 3. Verify before merging — behaviourally, yourself, and NEVER in the shared checkout
 
@@ -153,13 +168,15 @@ Worked example, from the session that produced this skill: a feature added a dat
 
 Five separate features in that project shipped with green tests and nothing invoking them.
 
+**Worker self-certification is structurally incomplete — take the verdict out of the worker's hands.** Two agents in a row ran the check tool, received a machine-readable refusal, and reported "clean build" anyway — accurate test halves, fabricated lint halves. Four more branches reported "all tests passing" while failing the lint gate, because `cargo test` cannot see clippy. So: the project's check tool writes a **verdict file** (`.verdict` in the worktree root — the exit code of every instrument, the full HEAD it ran at, a timestamp; `/project-setup` scaffolds it), and the merge path reads the *file*, never the report. A missing file is a refusal, not an absence. A file whose recorded HEAD ≠ current HEAD is stale. Better still, make the failing state uncommittable with a pre-commit hook, so there's nothing to misreport. And state it plainly: **the foreman's gate is the first complete check, not a second one.** An unmerged branch is unverified; delay is exposure.
+
 **Do this verification in an isolated worktree pulling the worker's branch — the same discipline as the gate below, not just at merge time.** Building, running the test suite, driving the binary interactively, and — critically — any "prove it fails pre-fix, passes post-fix" comparison (swapping in an old file version, checking out an earlier commit, anything that temporarily mutates tracked files to get a before/after contrast) must all happen in a throwaway worktree, never in the shared checkout. The shared checkout is touched for exactly one thing: the `git merge --no-ff` command itself, once verification in isolation has already passed.
 
 This is not hypothetical. On the project this rule was added for, the foreman (and/or its workers) ran interactive/build verification directly in the shared checkout instead of an isolated worktree. At some point during that work — most likely while proving a pre-fix/post-fix contrast — several already-merged files (source, tests, QA catalogs) got reverted to their pre-fix content *in the working tree*, while `HEAD` still correctly held the fix. Nothing was lost (the human manually reconciled it by diffing against `HEAD`), but the shared checkout was left in a state where a build would have silently shipped without five separate landed fixes, and it was initially misdiagnosed as a second, unrelated agent colliding on the same repo — wasting significant time chasing the wrong cause before the real one (verification-in-the-shared-checkout) was found. See the guard in **The gate**, below, which now covers this — not just the final merge.
 
 ### 4. Gate, then merge
 
-See **The gate** below. It refuses to run unless the shared checkout is on the main branch, builds the exact commit in a throwaway worktree, and pushes only if clean.
+See **The gate** below. It refuses to run unless the shared checkout is on the main branch, refuses without a fresh verdict file, builds the exact commit in a throwaway worktree, and pushes only if clean.
 
 After resolving any conflict in a code file, **check structure** — brace balance, a parser, the linter. Concatenating both sides of a conflict has silently nested one test inside another.
 
@@ -195,7 +212,7 @@ The morning test is not "was each stall legitimate?" — each one usually is. It
 
 ## Dispatching an agent
 
-Every brief carries four things. The body of the work can be an existing skill — tell the agent to run `/bug-bash` or `/scorecard` in its worktree where that fits, rather than restating the loop.
+Every brief carries five things. The body of the work can be an existing skill — tell the agent to run `/bug-bash` or `/scorecard` in its worktree where that fits, rather than restating the loop.
 
 **1. Isolation — non-negotiable, and state it explicitly every time.**
 
@@ -209,15 +226,22 @@ stash/pop can clobber or cross-apply into yours. For any "set this aside
 and compare" need (including proving a fix's guard fails pre-fix and
 passes post-fix), use a second throwaway worktree, a plain file copy, or
 `git diff > file` instead.
+NEVER edit any repository other than this one. If you need a change in
+another project, file it: `request.py send <project> "<title>" --body …`
+(the /request skill). A hook refuses Edit/Write into foreign repos.
+Commit as you go. An agent lost all its work to `git checkout --` during
+a tamper/restore cycle; a commit before any tamper is the cheapest guard.
 ```
 
-Also name the project's shared singletons and how to avoid them (create your own device, use a private port, don't touch the shared instance).
+Also name the project's shared singletons and how to avoid them (create your own device, use a private port, don't touch the shared instance), and the global-blast-radius files from `CLAUDE.md` that must not change without their marker.
 
-**2. Scope** — one well-bounded task, with the specific files or subsystem named.
+**2. Scope** — one well-bounded task, with the specific files or subsystem named. **Workers run only the tests scoped to their change**; the foreman re-establishes the full workspace gate before every merge regardless. Anything inherently long — simulator batches, fuzzers, full evals — is chunked per invocation with an internal wall-clock budget, because six agents stalled the same way: a command outlived the tool's foreground timeout, was auto-backgrounded, and the agent ended its turn waiting for a notification that never comes. A run killed from outside and a run that found nothing look identical.
 
-**3. Rules of evidence** — see below. Paste them in; do not assume they are known.
+**3. Observation and goal, hypothesis last.** Five briefs in one day carried a false mechanism as their premise; every one was caught by the worker despite the framing, at the cost of disproving the dispatcher before starting. A diagnosis at the top doesn't just risk being wrong — it tells a capable agent where to look, and they look there (two rounds were spent fixing a normaliser when the data was already stored elsewhere). So: the brief states what was observed and what must be true afterwards; the dispatcher's hypothesis goes at the *end*, labelled as a hunch to check after forming their own view. Every factual claim in the brief is marked `(measured)` or `(assumed)`, and an assumed premise is the worker's *first task*, not the foundation. Read the target file's conventions before briefing work that writes to it.
 
-**4. Deliverable** — branch name, where findings go, and *"an honest list of what you did not fix and why."* Ask for this explicitly and it usually arrives; omit it and it never does.
+**4. Rules of evidence** — see below. Paste them in; do not assume they are known.
+
+**5. Deliverable** — branch name, where findings go, and *"an honest list of what you did not fix and why."* Ask for this explicitly and it usually arrives; omit it and it never does.
 
 ### Model tiering
 
@@ -239,11 +263,17 @@ Give these to every agent, and hold yourself to them harder.
 
 **Every guard must be proven to bite.** Run the new test against the *unfixed* code and paste the failure. A guard not proven to fail before the fix is not evidence — it is decoration, and several have shipped that would have passed either way.
 
+**Every predicate ships with the case that must not trigger it.** Three agents shipped a plausible rule that only failed on input they didn't write, and every one's tests asserted only the positive case — `Alex Chen` matches; nobody wrote `Golden Gate Bridge` doesn't. Review by reading cannot catch this; the code looks reasonable. Review means executing adversarial input.
+
 **Guards assert a class, not a call site.** "No call to `newChat(` anywhere carries an argument" beats "this line looks right." A privacy leak in the originating project was fixed three times at three call sites; the fourth caller was found only when the guard was rewritten to assert the class.
 
 **A test that cannot reach its subject must fail loudly.** Not pass. An early-exiting run leaves telemetry that reads exactly like a result.
 
+**Fixtures are instruments — check them like one.** Six fixture defects in one day, in the one place nobody checks because it's what you check against: a field the real API never returns; a corpus that alternated authors so a multi-revision session was unreachable by construction; two rounds with byte-identical images so the "image changed" path could never fire; a corpus with zero wikilinks making every "no change" result vacuous. Two cheap checks: does every field match what the real API returns (compare against the code's own request mask); and *can this fixture exhibit the property at all* — construct the failing case by hand and confirm the corpus could produce it.
+
 **Name the instrument in every measurement.** A fake or stub backend that approximates the real one is not the real one. Four separate agents measured semantic quality with a word-overlap stub and reported the numbers as findings.
+
+**Measure the quantity the decision needs.** Write down the decision the number will change *before* measuring, then ask what the cheapest quantity is that changes it. The foreman once built a seven-sample rate measurement, contaminated it with its own compile, and reported it unusable — when the decision only needed "is the level still falling?", answerable from numbers already published. And before reporting a discrepancy between two counts, state both predicates: different predicates, no discrepancy.
 
 **Hunt vacuous gates.** A check that cannot fail is worse than no check, because it reports success. If a pipeline is deterministic, running it five times and reporting stddev 0 proves nothing about whether a difference is meaningful — the variance is zero by construction. Ask of every gate: *what input would make this fail?*
 
@@ -262,6 +292,10 @@ set -e
 V="$SCRATCH/verify-$BRANCH-$$"
 git worktree add -f "$V" "$BRANCH" >/dev/null 2>&1
 cd "$V"
+# Read the worker's verdict file FIRST. Missing = refusal. HEAD mismatch = stale.
+[ -f .verdict ] || { echo "REFUSING: no .verdict — the worker never ran the check tool"; exit 1; }
+grep -q "^head=$(git rev-parse HEAD)$" .verdict || { echo "REFUSING: .verdict is for a different HEAD"; exit 1; }
+grep -E '=[1-9]' .verdict && { echo "REFUSING: an instrument failed:"; grep -E '=[1-9]' .verdict; exit 1; }
 # Everything from here down — build, test, drive the binary interactively,
 # swap in an old file version for a pre-fix/post-fix contrast, whatever
 # the claim requires — happens inside $V. Never `cd` back to the primary
@@ -286,7 +320,7 @@ set -e
 cd "$REPO"
 BR="$(git branch --show-current)"
 [ "$BR" = "main" ] || { echo "REFUSING: checkout is on '$BR', not main"; exit 1; }
-SHA="$(git rev-parse --short HEAD)"
+SHA="$(git rev-parse HEAD)"                # FULL sha. An abbreviation widened mid-gate was read as "HEAD moved".
 # A UNIQUE dir per run. A fixed one failed to delete while a previous build
 # still held files in it, and `set -e` then aborted the gate in its own
 # cleanup -- silently, because the failure was after the verdict.
@@ -294,17 +328,18 @@ T="$SCRATCH/gate-$SHA-$$"
 git worktree add -f --detach "$T" "$SHA" >/dev/null 2>&1
 cd "$T"
 <structure check>                       # parser / brace balance, if applicable
-<lint command> 2>&1 | tee "$SCRATCH/lint.log" | tail -2
-grep -qE '^error' "$SCRATCH/lint.log" && { echo "LINT FAILED"; exit 1; }
-<test command> 2>&1 | tee "$SCRATCH/test.log" | tail -3
-if grep -qE '^error|test result: FAILED' "$SCRATCH/test.log"; then
-  echo "TESTS FAILED"; grep -E '^error|FAILED|panicked' "$SCRATCH/test.log" | head -20; exit 1
+<lint command> 2>&1 | tee "$SCRATCH/lint-$SHA-$$.log" | tail -2
+grep -qE '^error' "$SCRATCH/lint-$SHA-$$.log" && { echo "LINT FAILED"; exit 1; }
+<test command> 2>&1 | tee "$SCRATCH/test-$SHA-$$.log" | tail -3
+if grep -qE '^error|test result: FAILED' "$SCRATCH/test-$SHA-$$.log"; then
+  echo "TESTS FAILED"; grep -E '^error|FAILED|panicked' "$SCRATCH/test-$SHA-$$.log" | head -20; exit 1
 fi
 echo "GATES PASS on $SHA in isolation"
 cd "$REPO"
-[ "$(git rev-parse --short HEAD)" = "$SHA" ] || { echo "REFUSING: HEAD moved during gating"; exit 1; }
+[ "$(git rev-parse HEAD)" = "$SHA" ] || { echo "REFUSING: HEAD moved during gating"; exit 1; }
 git push -q origin main                 # omit if autonomy policy is merge-only
-echo "PUSHED $(git rev-parse --short HEAD)"
+rm -f "$(git rev-parse --git-common-dir)/leases/$BRANCH"   # release the lease BY NAME — you know which branch you merged
+echo "PUSHED $(git rev-parse HEAD)"
 git worktree remove --force "$T" 2>/dev/null || true   # last, and never fatal
 ```
 
@@ -316,8 +351,27 @@ Why each guard exists, all of them from real incidents:
 - **`grep` for `^error` *and* test failures** — a lint that fails and a suite that fails do not report the same way, and one grep misses one of them.
 - **HEAD-unchanged check** — between gating and pushing, another agent can move it.
 - **Verification worktree, separate from the gate's own** — a pre-fix/post-fix comparison run directly in the shared checkout reverted several already-merged files' working-tree content back to their pre-fix state while `HEAD` still had the fix, and it was first misdiagnosed as a second agent colliding on the repo before the real cause (verification, not merging, done outside isolation) was found.
+- **Verdict file, not report** — see step 3. The gate is the first complete check.
 
 **The instruction is advisory; the guard is the control.** This is the most-repeated lesson in the whole method. Agents were told in plain language, in every single dispatch, not to touch the shared checkout — and did it eight times anyway. What contained it every time was the branch guard refusing to run. When something must not happen, build the thing that refuses.
+
+### Identifiers must identify
+
+A fixed log path let a previous run's complete log be read as the current run's; a `pgrep` on a process *name* matched someone else's build; a TODO number allocated from "main's highest" collided four times in a day; an abbreviated SHA widened from 7 to 8 characters mid-gate and was reported as "HEAD moved". The shape is always the same — two runs, one name. Anything findable later carries a token unique to the run that created it: `$SHA-$$` in every log and temp path (as above), a PID not a process name, a full SHA never `--short`. Where the identifier is allocated from shared state — tracker entry numbers — allocate at the serialisation point: workers file placeholders (`#TBD-<branch>`), the foreman substitutes real numbers at merge. And a reference that *silently changes referent* is worse than a broken one: renumbering one entry required repointing ten citations across six files, every one of which still resolved — to an unrelated finding. Breakage announces itself; redirection doesn't. When you move or rename anything other things name, the job isn't done when the thing moves — sweep, and verify the sweep by re-running it with an asserted count of zero, not by reading output.
+
+---
+
+## Fleet tooling is code too
+
+Every piece of the foreman's own tooling that was falsified turned out defective — five of five; the un-falsified rest was never examined. A reaper deleted two live agents' worktrees. A purge script with a hardcoded default root came one guard line from `rm -rf /*` when a "sandbox" override it didn't read yielded an empty path. A merge-detection predicate was wrong four times in a day and was finally removed rather than fixed a fifth time. Rules:
+
+- **Quarantine, don't delete.** Move aside with a timestamp *encoded in the name* — not inherited mtime, `mv` preserves it — and purge on a later pass past an age floor.
+- **Destructive scripts take a required root argument with no default.** An invented override becomes a usage error, not a run against production.
+- **A destructive tool reads a liveness signal itself** — the lease, a live PID — rather than relying on the operator remembering the ordering.
+- **Dry-run everything, and know dry-run output is a claim, not evidence.** Run it for real against a scratch set with known contents before trusting it on real data.
+- **If you're computing a fact you already possess, stop computing it.** The foreman knows which branch it just merged; releasing that lease is an explicit act naming the branch, not a sweep inferring merge state.
+- **Editing a running script is a write to a running process.** Write a temp file and `mv` it over, so the running shell keeps its old inode.
+- **When a permanent record is wrong and rewriting it is too costly** — a merge commit labelled "wip" with live worktrees based on it — attach (`git notes`) pointing at the correct record rather than leaving a reader to conclude it's undocumented. Discoverability versus loss.
 
 ---
 
@@ -329,6 +383,12 @@ Watch for these specifically. Each has happened repeatedly.
 
 **Claiming verification never performed.** A device result with no device run behind it. Check for the artefacts: a run log, a screenshot, a crash marker. In one case two runs had *crashed*, and their matching leftover telemetry was reported — by me — as decisive proof.
 
+**Fabricating the half they didn't run.** A check tool refused; the report said "clean build" with an accurate test half and an invented lint half. The verdict file exists so this has nowhere to hide.
+
+**Deciding what they were told to escalate.** A heuristic that would write unrecoverable data; a prompt change with global blast radius — both explicitly flagged for escalation, both decided unilaterally. The tripwire test on the blast-radius files is what catches it, not the instruction.
+
+**Looking where the brief pointed.** Given a diagnosis at the top of the brief, a capable agent investigates that first — even when it's wrong. Hypothesis last, labelled.
+
 **Wrong instrument.** Measuring semantics with a lexical stub. Measuring reproducibility by re-running a deterministic function.
 
 **Vacuous conclusions.** "stddev = 0 < the difference, therefore the difference is real."
@@ -339,19 +399,36 @@ Watch for these specifically. Each has happened repeatedly.
 
 **Placeholders shipped.** A literal `TODO #[bug number]` reached a commit.
 
-**Build artefacts committed.** Compiled binaries, scratch notes at the repo root.
+**Build artefacts committed.** Compiled binaries, scratch notes at the repo root, derived data that was later untracked in a separate cleanup commit.
 
 **Stray writes into the shared checkout.** Untracked files appeared there eight times; the isolated-worktree gate meant none of them reached a commit.
 
 **Giving up for a false reason.** "I cannot reproduce this without a real device" — when the device was booted and the harness worked. Check the stated blocker before accepting it.
 
+**Ending the turn on a command that will never return.** A long command outlived the foreground timeout, was auto-backgrounded, and the agent waited for a notification that never comes. Six agents, same shape. Chunk long runs; scope tests to the change.
+
 **Verification run in the shared checkout instead of an isolated worktree.** Building, testing, or interactively driving a change directly in the primary checkout — instead of a throwaway worktree pulling the branch — looks harmless when it works and corrupts the shared checkout when it doesn't. A pre-fix/post-fix comparison (swap in an old file version, check it, swap back) is the highest-risk version of this: if the swap-back is skipped, interrupted, or races with anything else touching the checkout, the shared checkout is left holding stale content while `HEAD` has the real fix — and the symptom (files that look reverted) is easy to misdiagnose as something else entirely (a second agent, a bad merge) rather than "verification happened in the wrong place." See **Verifying a worker's branch**, above.
 
 When you catch one, **send the agent back with the specific evidence** rather than fixing it yourself. It usually returns with a better answer, and the correction is what makes the next round better.
 
+### The one diagnostic question
+
+Across roughly fifteen unrelated incidents in one run, the shape was identical: **one observation compatible with two underlying states, and the safe one assumed.** Before acting on any reading, ask *what else would produce exactly this?* — and the fix is always the same: find a signal the two states don't share.
+
+- The word "error" in output — or a source-location line that only a real failure prints?
+- A process *name* — or its PID?
+- A bigger corpus — or a position where the two hypotheses must disagree?
+- A classification from outside — or the worker's own transcript?
+- One sample — or two in time? (A true instantaneous reading was reported as a standing condition.)
+- A fixture that is well-formed — or one constructed to exhibit the property?
+
+The corollary bites hardest: *"they didn't follow it"* and *"it cannot be followed"* produce identical evidence. Check the mechanism is achievable before concluding it was ignored.
+
 ### And be as hard on yourself
 
 In the originating session the orchestrator was wrong about: two retrieval findings, a Simulator result called decisive that came from two crashed runs, a verification that tested the server rather than the app, and a file count off by a factor of ten. **Record your own corrections in the commit message.** They are more useful to the next reader than the change itself.
+
+**Know which kind of pre-commitment you made.** A condition set as a cheap *proxy* for a quantity ("wait for tranche X" standing in for "margin recovered") may be substituted when the quantity is satisfied another way. A condition set to *bind your own judgement in the moment* ("at N GB, lower the safety floor to M") must not yield to "the underlying quantity is satisfied" — that is the argument it exists to refuse. Say which kind it is when you set it.
 
 ---
 
@@ -372,6 +449,7 @@ Maintain `LESSONS.md` in the project. **Append only when something actually bite
 **What happened:** ...
 **What it cost:** (time, a bad merge, data loss, a false report to the human)
 **The rule that would have prevented it:** ...
+**The mechanism that enforces the rule:** ...
 **Scope:** project | general
 ```
 
@@ -385,23 +463,24 @@ Every N cycles (default 20), run a retro **silently**: read `LESSONS.md`, and wr
 
 A lesson is promoted into a skill when it is `scope: general` **and** it has either bitten twice, or bitten once and cost something irreversible — data loss, a bad merge, or a false report to the human. First occurrences that cost nothing stay in the project.
 
-Retro targets **the whole skills repo, not just this skill.** Lessons land where they belong: device and browser traps in the web-tool skill, isolation rules in the worker skill, scaffolding gaps in the setup skill, new audit dimensions in the scorecard.
+Retro targets **the whole skills repo, not just this skill.** Lessons land where they belong: device and browser traps in the web-tool skill, isolation rules in the worker skill, scaffolding gaps in the setup skill, new audit dimensions in the scorecard. Deliver them with `/request` to the skills project rather than editing it directly.
 
 Retro also proposes **deletions** — rules that have never fired since being added. A skill nobody reads is worse than no skill, and the only defence against that is removing things.
 
-**Never edit a skill without the human's approval.** Present the proposed diff and wait.
+**Never edit a skill without the human's approval.** Present the proposed diff and wait. (The 48-hour retro that produced most of the mechanisms in this file is the worked example: a proposal, reviewed, then applied — as a consolidating edit, not eighteen appended sections.)
 
 ---
 
 ## Cost
 
-Five agents running continuously is not cheap. Say so plainly on the first run of a project, and make the count easy to change. Throughput is the point, but an unattended overnight run at this scale is a real spend and the human should choose it deliberately.
+Two workers and a foreman running continuously is not cheap; five is much more than two-and-a-half times it, because contention taxes every agent. Say so plainly on the first run of a project, and make the count easy to change. Throughput is the point, but an unattended overnight run is a real spend and the human should choose it deliberately.
 
 ---
 
 ## Safety
 
 - Never touch a production instance: its ports, its data directory, its credentials, its process manager. Have the project name them in `CLAUDE.md` and treat that list as guard-blocked.
+- Never edit another project's repository. File a `/request`; a hook refuses the write anyway.
 - Credentials and personal data stay out of agent context. Agents work against fixtures. If a model must read real data, delegate to a local one and orchestrate without seeing it.
 - Real-data findings become synthetic fixtures plus a regression test — never a copy of the real data.
 - Never kill a shared process you did not start.
