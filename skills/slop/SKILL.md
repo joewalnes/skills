@@ -66,19 +66,27 @@ Three surface-area shapes worth measuring directly, because the script can't see
 /slop --quick            # one grade + three lines, for /scorecard's Accretion row
 ```
 
+## The scripts
+
+Three, all Python, all approximate by construction and labelled so. `scripts/slop_lang.py` holds the per-language patterns (Go, Rust, Perl, Python, JS/TS) the other two share.
+
+- **`slop_history.py <repo>`** — tier 3. Add:delete (production vs everything), fix commits that delete nothing, fix-of-a-fix chains, the fix-hotspot table, refactor moves, duplicate landings; split hand-written vs AI-attributed, or `--split YYYY-MM-DD`.
+- **`slop_surface.py <repo> --from REV [--to REV]`** — tier 2. Production LOC with inline test modules separated, public/exported names, function count, the longest functions, the biggest files, and the delta between two revisions. `--at REV` gives one reading (the compass uses this). This replaces every hand-measurement that went wrong in the first trials.
+- **`slop_diff.py --repo R <base>..<head> [--require-thesis]`** — the pre-merge check, and `/go-team`'s gate instrument. **Exit 0** clean (hints may print); **exit 2** *return to worker* with reasons: a fix that deletes no production line and names no `Cause:`; public surface that grows with no `Surface:` trailer; no `Thesis:` trailer (when required); a new function whose name nearly matches an existing one. Hints, never deciding: a subject that reads as several theses, added lines repeated three or more times, generic names. Returned is not failed — the worker answers the question and resubmits.
+
 ## Repo mode
 
 1. **Run the script.** `python3 <skill-dir>/scripts/slop_history.py <repo>`. It splits history into a hand-written era and an AI-attributed era when it can (via `Co-Authored-By` trailers and similar markers) — that comparison, on the same codebase, is the most persuasive evidence there is. Use `--since` to narrow, `--split YYYY-MM-DD` if attribution is missing. Read the **production-code-only** ratio, not the headline one. Changelogs, docs and bug registries are excluded from fix signals automatically; check the exclusion line to make sure it caught the right files.
    **Attribution is by trailer, not author.** In a repo worked by agents, every commit's author field is the human — agents commit under their name. "Hand-written" in the script means *no AI trailer*, which may be the human, a foreman session, or a squash that lost its trailers. In a repo the human says is 100% AI, read the two columns as *early era vs late era*, and treat any untagged net-deleting commits as a question ("who is folding things back?") not a fact.
    When measuring surface area by hand, traps from the trials: `grep -v _test` filters *lines*, not files, so exported-name counts silently include `TestXxx` — filter the file list instead; and in zsh, `$REV:path` is always a parameter modifier (`:c`, `:l`, …), so quote every one: `"$REV":path`. A "longest function" measured as the gap between `fn` declarations will report an inline `mod tests` as a 2,800-line function — stop at `#[cfg(test)]`. And macOS's BWK awk does not support `\s`: `^\s*fn` silently anchors to column 0 and sees only top-level functions, which turned an `impl` block into a phantom 2,277-line function. Use `[[:space:]]` in awk and grep — or, per this repo's own rule, measure in Python. `git log --grep='\bfix'` also matches "fixture" and "fixed"; the script's subject-only, word-bounded regex is the one to trust.
 2. **Read the flagged commits. Do not grade from the numbers.** For each zero-deletion fix and each fix-of-a-fix chain: `git show <hash>`. Ask the tier-1 question — could the author say why? Is there a root cause named, or a guard around a symptom?
-3. **Sample the surface area.** Pick 3–5 substantive recent changes. For each, count the learning surface before and after: exported names, parameters, options, special cases. Note whether it grew, and whether the growth bought leverage.
+3. **Measure the surface area.** `slop_surface.py <repo> --from <start of window>` gives public names, function lengths and prod/test split at both ends and the delta. Then read 2–3 of the changes behind the biggest movements and ask whether the growth bought leverage.
 4. **Check for a theory-holder.** Read `README`/`CLAUDE.md`/`DIARY.md` if present. Can the *repo* say why its modules exist? Does the architecture described match the architecture present?
 5. **Grade** (rubric below), then write the report.
 
 ## Diff mode
 
-For a branch or range, in this order — stop early if tier 1 fails badly:
+For a branch or range: run `slop_diff.py --repo <repo> <base>..<head> --require-thesis` first — it does the mechanical half and tells you whether the branch is already going back. Then, in this order, the judgement half — stop early if tier 1 fails badly:
 
 1. **Thesis.** Write the one sentence that accounts for the whole diff. If you can't — if it needs "and also" — that's the finding. Check it against the commit messages.
 2. **Surface-area delta.** Exported/public names, parameters, config/flags, special cases, files a reader must now open. Before vs after, as a short list. Did it grow? Did the growth buy anything?
@@ -139,6 +147,6 @@ Grade the *codebase or change*, not the tooling that produced it. Human-written 
 
 ## Integration
 
-- **`/go-team`** runs `/slop <branch>` in its gate. A fix that deletes nothing and names no cause goes back to the worker with the question — it does not fail, and it does not merge.
+- **`/go-team`** runs `slop_diff.py` in its gate (exit 2 = return to worker), reads `slop_surface.py --at HEAD` into its compass every ten cycles, and gives its consolidation seat the hotspot table as a work queue.
 - **`/scorecard`** row 14, *Accretion*, runs `/slop --quick` and reports its grade, the same way Security cross-checks `/delegate-security-audit`.
 - **Dispatch rule for agents**, upstream of all of this: *before implementing, state the thesis in one sentence and what surface area it adds or removes.* Not "make it small" — "make it chosen."
