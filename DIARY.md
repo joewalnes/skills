@@ -4,6 +4,24 @@ Latest entries first. Record significant decisions, architecture changes, and no
 
 ---
 
+## 2026-09-03 — /slop: measuring unchosen code, and a first trial that argued back
+
+Joe described a feeling about his long-lived open-source projects since AI started writing most of the code: sometimes good, sometimes "it just doesn't feel right," and hard to articulate. When he wrote by hand, the sheer cost forced him to plan, to pick the highest-leverage change, and to write for a reader. With AI the pattern is fix → tons of code → didn't work → tons more code.
+
+The articulation we landed on: **hand-written code is the residue of understanding; slop is the residue of attempts.** Every absence in hand-written code was a decision (no null check = "I know this can't be null"). Slop has no absences — every guard that *might* be needed is present — so a reader can't tell what matters. Fix-by-addition is the locally optimal move when the reward is "did the error go away," which is why it's the signature. Naur's *Programming as Theory Building* is the deepest frame: the product is the theory in someone's head, and Joe was that someone.
+
+**The correction that shaped the design.** My first cut of signals leaned on volume — "smallest diff," "single-implementation abstraction is a smell." Joe pushed back: he intentionally makes big changes, and intentionally creates one-implementation seams when he anticipates variation. He values small surface area and composability, not small diffs. So the axis is *surface area and articulability*, not size. Slop is **unchosen** code; the test is *could the author say why?* A 500-line refactor with one thesis passes; a 50-line fix with three theses doesn't. This became the skill's central rule and its "What this skill does NOT penalise" section.
+
+**Research backing** (GitClear 2026: refactoring down 70%, duplication up 81%, error-masking constructs up 47%; a 302K-commit study: 22.7% of AI-introduced issues never fixed; METR: experienced maintainers 19% slower while believing they were 20% faster; the "Explanation Gate" study: requiring people to explain AI changes before merging halved later maintenance failures). The Explanation Gate became `/slop --explain`.
+
+**Design.** A new skill rather than a scorecard dimension, because slop is a *trend over history* (different data source: `git log`, not the tree) and because the highest-leverage place to catch it is *pre-merge on a branch*, which scorecard structurally can't do. Four tiers: articulability decides; surface area decides; history trends are evidence; classic smells only annotate. A Python script computes the history signals and splits hand-written vs AI-attributed eras from commit trailers.
+
+**The trial on websocketd argued back, which is the point.** 453 commits, 2013→now, 110 AI-attributed — a natural experiment. Headline numbers looked like the thesis: add:delete 2.4:1 → 7.5:1, refactor moves 17 → 0, median commit 13 → 44 lines. Then reading the flagged commits: every one had a stated, load-bearing reason (why removal beats escaping; why panic beats degrade; why a separate go.mod). Exported API went 23 → 24 names while code grew 60% — flat surface area. DIARY.md and LESSONS.md are exactly the theory-holder record Naur would want. The scary 7.5:1 was **86% tests, docs and tooling**; the production-code ratio was 1.97:1 in *both* eras — identical. Grade: not slop. The honest yellow flags: zero refactoring in 110 commits, and two commits bundling several theses (one lists six fixes in its subject line).
+
+Three things the trial fixed in the tooling: changelogs and bug-registry files are touched by every fix *by design* and were inflating fix-of-a-fix chains — now excluded by share-of-fixes and by name; additions must be split production vs non-production before the ratio means anything; and two measurement traps worth recording because both produced confident wrong numbers — `grep -v _test` filters lines not files (it counted `TestXxx` as exported API, "tripling" it), and zsh treats `$REV:config.go` as a `:c` modifier.
+
+---
+
 ## 2026-09-01 — Split /delegate into 5 skills; image panel + jury; bash → Python/Perl
 
 Split the single `/delegate` skill into five standalone ones (`delegate-image`, `delegate-sec`, `delegate-private`, `delegate-review`, `delegate-bulk`) — Joe wanted each surfaced directly in `/` autocomplete rather than buried as an argument inside one umbrella command.

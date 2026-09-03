@@ -71,6 +71,8 @@ Most of these skills are designed to run as one loop, not as isolated commands. 
 
 **5. Audit, and feed it back — `/scorecard`.** Periodic letter-graded health check across 13 code dimensions plus a second table for *agent-readiness*: could an agent work here for eight hours without a human? Its Security grade cross-checks against `/delegate-security-audit` for a second model's opinion. Findings go back into the tracker, where `/go-team` picks them up.
 
+**5b. Watch for slop — `/slop`.** Cheap code has a failure mode that looks fine commit by commit: every change adds a guard, a fallback, a special case, and nothing is ever folded back. `/slop` measures whether a repo is accreting — splitting history into a hand-written era and an AI era when it can — and, run on a branch, asks the one question that separates a chosen change from an unchosen one: *could the author say why?* It grades on articulability and surface area, explicitly not on diff size; a big refactor with one thesis passes, a small fix with none doesn't.
+
 | Skill | Role in the loop |
 |-------|------------------|
 | `project-setup` | Establish the scaffolding once (tracker, diary, rules, unattended permissions) |
@@ -79,6 +81,7 @@ Most of these skills are designed to run as one loop, not as isolated commands. 
 | `go-team` | Work the tracker with a crew, unattended; verify before merging |
 | `sitrep` | Resume: what landed, what's running, what's blocked on you |
 | `scorecard` | Periodic audit; findings feed back into the tracker |
+| `slop` | Audit for *unchosen* code — accretion trends on a repo, or a pre-merge check on a branch |
 
 ## On-demand skills
 
