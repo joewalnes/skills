@@ -20,7 +20,7 @@ FIX_RE = re.compile(r"\b(fix|fixes|fixed|fixing|hotfix|bugfix|repair|patch)\b", 
 TRIVIAL_RE = re.compile(r"\b(typo|comment|rename|whitespace|format|formatting|lint|spelling)\b", re.I)
 RENAME_RE = re.compile(r"\{(.*?) => (.*?)\}|^(.*) => (.*)$")
 # Files that change with every fix by design, or aren't code at all. Excluded from fix signals.
-REGISTRY_NAME_RE = re.compile(r"(^|/)(CHANGES|CHANGELOG|HISTORY|NEWS|SCORECARD|TODO|ASKS|DIARY|LESSONS)[^/]*$|known_bugs|\.md$", re.I)
+REGISTRY_NAME_RE = re.compile(r"(^|/)(CHANGES|CHANGELOG|HISTORY|NEWS|SCORECARD|TODO|ASKS|DIARY|LESSONS|Cargo\.lock|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|go\.sum|poetry\.lock|Gemfile\.lock)[^/]*$|known_bugs|\.md$", re.I)
 # Tests, docs, tooling, examples: additions here are not accretion in the production code.
 NONPROD_RE = re.compile(r"_test\.|(^|/)(test|tests|testdata|qa|spec|specs|docs?|examples?|bench|website|release|scripts?|tools?)/|\.(md|txt|rst)$", re.I)
 
@@ -39,7 +39,7 @@ def rename_target(path):
 
 def parse_log(repo, since):
     args = ["git", "-C", repo, "log", "--numstat", "--no-merges", "--date=unix",
-            "--format=@@C@@%n%H%n%at%n%an%n%s%n%b%n@@E@@"]
+            "--format=@@C@@%n%H%n%at%n%P%n%an%n%s%n%b%n@@E@@"]
     if since:
         args.append(f"--since={since}")
     out = subprocess.run(args, capture_output=True, text=True, check=True).stdout
@@ -53,7 +53,9 @@ def parse_log(repo, since):
         if state == "hash":
             cur["hash"] = line; state = "ts"
         elif state == "ts":
-            cur["ts"] = int(line); state = "author"
+            cur["ts"] = int(line); state = "parents"
+        elif state == "parents":
+            cur["parents"] = line.split(); state = "author"
         elif state == "author":
             cur["author"] = line; state = "subject"
         elif state == "subject":
@@ -141,8 +143,16 @@ def analyse(commits, all_commits):
             if i + 1 < len(tl) and (tl[i + 1][0] - ts) / 86400 <= CHURN_DAYS and tl[i + 1][1]["hash"] != c["hash"]:
                 churn += 1
 
+    hot = defaultdict(int)
+    for c in fixes:
+        for path in {f["path"] for f in code_files(c)}:
+            if not NONPROD_RE.search(path):
+                hot[path] += 1
+    fix_hotspots = sorted(hot.items(), key=lambda kv: -kv[1])[:8]
+
     pct = lambda a, b: (100.0 * a / b) if b else 0.0
     return {
+        "fix_hotspots": fix_hotspots,
         "commits": n, "adds": adds, "dels": dels,
         "add_del_ratio": (adds / dels) if dels else float("inf"),
         "prod_adds": prod_adds, "prod_dels": prod_dels,
@@ -220,6 +230,10 @@ def main():
     eras = {k: v for k, v in eras.items() if v}
 
     print(f"# /slop history — {a.repo}  ({len(commits)} non-merge commits; {ai_n} AI-attributed)\n")
+    span_days = (commits[-1]["ts"] - commits[0]["ts"]) / 86400
+    if span_days < CHURN_DAYS * 2:
+        print(f"⚠ history spans only {span_days:.0f} days — the {CHURN_DAYS}-day churn and {LEGACY_DAYS}-day legacy "
+              f"signals are not meaningful here; read the ratios and fix signals instead.\n")
     print_table(eras)
 
     focus = eras.get("AI-attributed") or eras.get(next(k for k in eras if k.startswith("from ")), None) or eras["all"]
@@ -239,6 +253,22 @@ def main():
         seen.add(key)
         print(f"  {prev['hash'][:8]} → {c['hash'][:8]}  {path}")
         print(f"      '{prev['subject'][:60]}'  →  '{c['subject'][:60]}'")
+    print(f"\n### fix hotspots — production files most often touched by fix commits")
+    for path, k in focus["fix_hotspots"]:
+        print(f"  {k:4d}  {path}")
+    if not focus["fix_hotspots"]:
+        print("  (none)")
+
+    by_key = defaultdict(list)
+    for c in commits:
+        by_key[(c["subject"], c["ts"])].append(c)
+    dups = [v for v in by_key.values() if len(v) > 1 and len({tuple(c.get("parents", [])) for c in v}) > 1]
+    print(f"\n### duplicate landings — same subject and timestamp, different parents ({len(dups)})")
+    for group in dups[:a.flags]:
+        print(f"  {' / '.join(c['hash'][:8] for c in group)}  {group[0]['date']}  {group[0]['subject'][:70]}")
+    if dups:
+        print("  (the same work reached main by two paths — usually harmless after merge, but check nothing landed twice)")
+
     print(f"\n### big diff, trivial message ({len(focus['big_trivial'])})")
     for c in sorted(focus["big_trivial"], key=lambda c: -(c["add"] + c["del"]))[:a.flags]:
         print(f"  {c['hash'][:8]}  {c['date']}  +{c['add']}/-{c['del']}  {c['subject'][:70]}")

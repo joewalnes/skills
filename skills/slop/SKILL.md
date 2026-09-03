@@ -21,6 +21,9 @@ Get this wrong and the skill becomes a lint for "small," which is a different an
 - **A fix that only adds lines is not automatically slop.** Sometimes a case was genuinely missing. The tiebreaker is whether the root cause is stated.
 - **A high add:delete ratio driven by tests, docs and tooling is not slop.** Split additions into production code versus tests/docs/tooling before reading the ratio as accretion — the history script does this. Five hundred lines of regression tests behind a ten-line fix is chosen; five hundred lines of guards is not. (First trial: a 7.5:1 ratio that looked like sediment turned out to be 86% tests and tooling; the production-code ratio was 1.97:1 in both the hand-written and AI eras — identical.)
 
+- **A high fix rate is not slop when fixing is the methodology.** A repo run through adversarial QA rounds (bug IDs like `QA-REG-218`, "hunting round 48") will be 30–40% fix commits by construction. The count says nothing; read *where* the fixes concentrate (the hotspot table) and whether each names its cause.
+- **A fix-of-a-fix chain in a hotspot file is not sediment until you've checked it's the same bug.** Three consecutive fixes to `Renderer.pm` on one day were three different bugs — every rendering bug lands in the file where rendering lives. That's a god-file finding (tier 2), not a fix-discipline finding (tier 3). Read the chain before naming it.
+
 In every case the distinguishing question is the same: **could the author say why?** A change that can be explained, whose explanation accounts for the whole diff, is chosen. Grade intent, not volume.
 
 ## The hierarchy — what decides the grade
@@ -28,6 +31,11 @@ In every case the distinguishing question is the same: **could the author say wh
 **1. Articulability (primary — decides).** Can the change be stated as one thesis, and does that thesis account for the whole diff? "Collapse the three renderers into one" — yes. "Fix X, and also handle Y, and add a fallback for Z" — that's three changes wearing one commit, none of them chosen. For a repo: can anyone say why each module exists?
 
 **2. Surface area and composability (measurable proxy — decides).** The *learning surface* is everything a reader or caller must know: exported names, function parameters, config options and flags, modes and special cases in behaviour, the number of files you must open to understand one thing. Count it before and after. Good changes — large or small — hold it flat or shrink it. Slop only ever grows it. Composability: can the pieces be combined without knowing about each other, or does each new piece special-case the last?
+
+Three surface-area shapes worth measuring directly, because the script can't see them:
+- **God files and god functions, and their trajectory.** Size the files the hotspot table names, at two or three points in history. A 5,000-line file absorbing 60 fixes and growing 20% a quarter is where sediment will form even if every individual commit is chosen. A 400-line function is a reader-load cost regardless of how it got there. But separate production lines from any inline test module first — a 5,000-line Rust file that is 60% `mod tests` is not the god file it looks like.
+- **The tracker itself.** `TODO.md` is part of the learning surface. One with hundreds of *done* items never pruned — thousands of lines a reader must wade through to find what's open — is theory-holder sediment. (`/scorecard`'s A1 dimension grades the same thing; cite it.)
+- **Docs versus code surface.** If the command palette grew 45% and `FEATURES.md` grew one line, either the new commands are variants of listed features or the doc is behind. Check which.
 
 **3. History trends (evidence — decides in repo mode).** These are the measured signatures of accretion, and `scripts/slop_history.py` computes them:
 - **Fix commits that delete nothing** — the single strongest signal. A fix that understands finds the wrong thing and removes it; a fix that doesn't wraps the symptom in a guard.
@@ -46,6 +54,8 @@ In every case the distinguishing question is the same: **could the author say wh
 - Long methods, god classes, and the *modular mirage* — files split up but not semantically cohesive.
 - Tests that mirror the implementation, assert a mock was called, or would pass if the code were deleted.
 - New code that reinvents something already in the codebase instead of calling it.
+- **Copy-pasted tests.** Five near-identical test functions asserting the same string with different inputs, where one table-driven test would do. Tests aren't surface area, but repetition in them is still unchosen — and it's where AI output is most repetitive.
+- **Fleet artifacts** (repos run by autonomous agent crews): the same commit landing twice via two branches, tracker entries duplicated by merges and then de-duplicated in a later commit, derived data or build output committed then untracked. Each is small; together they measure how much of a reconciliation role the fleet needs. The script flags duplicate landings.
 
 ## Modes
 
@@ -59,7 +69,8 @@ In every case the distinguishing question is the same: **could the author say wh
 ## Repo mode
 
 1. **Run the script.** `python3 <skill-dir>/scripts/slop_history.py <repo>`. It splits history into a hand-written era and an AI-attributed era when it can (via `Co-Authored-By` trailers and similar markers) — that comparison, on the same codebase, is the most persuasive evidence there is. Use `--since` to narrow, `--split YYYY-MM-DD` if attribution is missing. Read the **production-code-only** ratio, not the headline one. Changelogs, docs and bug registries are excluded from fix signals automatically; check the exclusion line to make sure it caught the right files.
-   When measuring surface area by hand, two traps from the first trial: `grep -v _test` filters *lines*, not files, so exported-name counts silently include `TestXxx` — filter the file list instead; and in zsh, `$REV:config.go` is a parameter modifier (`:c`), so quote it: `"$REV":config.go`.
+   **Attribution is by trailer, not author.** In a repo worked by agents, every commit's author field is the human — agents commit under their name. "Hand-written" in the script means *no AI trailer*, which may be the human, a foreman session, or a squash that lost its trailers. In a repo the human says is 100% AI, read the two columns as *early era vs late era*, and treat any untagged net-deleting commits as a question ("who is folding things back?") not a fact.
+   When measuring surface area by hand, traps from the trials: `grep -v _test` filters *lines*, not files, so exported-name counts silently include `TestXxx` — filter the file list instead; and in zsh, `$REV:path` is always a parameter modifier (`:c`, `:l`, …), so quote every one: `"$REV":path`. A "longest function" measured as the gap between `fn` declarations will report an inline `mod tests` as a 2,800-line function — stop at `#[cfg(test)]`. And macOS's BWK awk does not support `\s`: `^\s*fn` silently anchors to column 0 and sees only top-level functions, which turned an `impl` block into a phantom 2,277-line function. Use `[[:space:]]` in awk and grep — or, per this repo's own rule, measure in Python. `git log --grep='\bfix'` also matches "fixture" and "fixed"; the script's subject-only, word-bounded regex is the one to trust.
 2. **Read the flagged commits. Do not grade from the numbers.** For each zero-deletion fix and each fix-of-a-fix chain: `git show <hash>`. Ask the tier-1 question — could the author say why? Is there a root cause named, or a guard around a symptom?
 3. **Sample the surface area.** Pick 3–5 substantive recent changes. For each, count the learning surface before and after: exported names, parameters, options, special cases. Note whether it grew, and whether the growth bought leverage.
 4. **Check for a theory-holder.** Read `README`/`CLAUDE.md`/`DIARY.md` if present. Can the *repo* say why its modules exist? Does the architecture described match the architecture present?
