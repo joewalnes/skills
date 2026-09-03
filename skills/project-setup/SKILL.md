@@ -291,6 +291,52 @@ Two things worth flagging when you suggest this:
 
 ---
 
+### 13. Agent Operations Scaffolding
+
+**Pitch:** `/go-team` and `/bug-bash` depend on a handful of files and one `CLAUDE.md` section. Without them the fleet either can't verify (and falls back to trusting reports) or can't tell the human's asks from its own. This step establishes all of it at once; it's what makes the difference between an overnight run that ships and one that stalls or stomps.
+
+Add to `CLAUDE.md`:
+```
+## Agent operations
+
+- **Verification recipe:** <how to drive the real thing — build, run, curl/click/drive; not just the test suite>
+- **Autonomy policy:** merge-and-push | merge-locally-only
+- **Shared singletons:** <devices, ports, session pools, databases agents must not share, and how to get a private one>
+- **Do-not-touch:** <settled decisions, parked proposals, accepted limits>
+- **Global-blast-radius files:** <the short list where any change has global effect; each has a tripwire test>
+- **Requests lane:** ASKS.md
+- **Setup version:** 2026-09
+```
+
+Then scaffold the files:
+
+- **`ASKS.md`** — the human's own requests, one per line with a status. Seed it empty with a one-line header saying what it's for. Agents rank this above everything they find for themselves.
+- **`LESSONS.md`** — the ledger. Seed it with the entry template from `/go-team` (what happened / what it cost / the rule / **the mechanism** / scope) and the rule that you sharpen an existing lesson before adding a new one.
+- **The verdict file.** A `check` target or script that runs every instrument the recipe names and writes `.verdict` in the worktree root — one line per instrument `name=<exit code>`, plus `head=<full sha>` and `at=<iso8601>`. Merge paths read the file, never the worker's report. Add `.verdict` to `.gitignore`. Template (Python, per this repo's script rule):
+
+  ```python
+  #!/usr/bin/env python3
+  import subprocess, datetime
+  instruments = {"build": ["<build cmd>"], "lint": ["<lint cmd>"], "test": ["<test cmd>"]}
+  lines = [f"head={subprocess.run(['git','rev-parse','HEAD'],capture_output=True,text=True).stdout.strip()}",
+           f"at={datetime.datetime.now().astimezone().isoformat(timespec='seconds')}"]
+  for name, cmd in instruments.items():
+      lines.append(f"{name}={subprocess.run(cmd).returncode}")
+  open(".verdict", "w").write("\n".join(lines) + "\n")
+  ```
+- **A pre-commit hook** that runs the lint instrument, so a failing lint state is uncommittable — there's nothing to misreport. Optionally also refuse a commit whose subject says "fix" and whose diff deletes nothing unless the body names a `Cause:` — the cheapest mechanical check against fix-by-addition.
+- **Leases.** Nothing to create; just note in `CLAUDE.md` that dispatch writes `$(git rev-parse --git-common-dir)/leases/<branch>` and merge removes it by name.
+- **The foreign-repo guard.** Add to `.claude/settings.json` (merge, don't replace):
+  ```json
+  {"hooks": {"PreToolUse": [{"matcher": "Edit|Write|MultiEdit|NotebookEdit",
+    "hooks": [{"type": "command", "command": "python3 ~/.claude/skills/request/scripts/guard_foreign_repo.py"}]}]}}
+  ```
+  It denies edits into a *different* git repository and points at `/request`. Referenced by path so it never goes stale; if the skills aren't installed the hook errors and the call proceeds, which is the right failure mode.
+
+The **setup version** is how `/go-team` knows to offer this project the delta when the scaffolding evolves. Bump it here when this step changes.
+
+---
+
 ## Status Check
 
 When invoked with `status`, read the project's `CLAUDE.md` and check which of the above are already in place. Present a simple checklist:
@@ -310,8 +356,9 @@ Project setup status:
   [x] Mistake retrospectives — rule in CLAUDE.md
   [ ] Multiple Request Organization — not mentioned
   [ ] Unattended agent permissions — no .claude/settings.json allowlist
+  [ ] Agent operations scaffolding — no `## Agent operations` section / ASKS.md / .verdict
 
-6/12 adopted. Want to add any of the missing ones?
+6/13 adopted. Want to add any of the missing ones?
 ```
 
 ## Guidelines
