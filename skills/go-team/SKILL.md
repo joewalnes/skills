@@ -115,12 +115,12 @@ Check the project's `.claude/settings.json` (and `~/.claude/settings.json`):
 **If the setup version is behind the current `project-setup`,** offer the delta if the human is present; note it in the digest and carry on if not.
 
 **On the first run** (`/go-team start`), confirm with the human:
-- agent count — **default 2 workers plus the foreman**, and the cost implication
+- agent count — **default 3 workers plus the foreman**, one per seat (see *Three seats*), and the cost implication
 - autonomy: push to remote, or merge locally only
 
-Record both in `CLAUDE.md` so you never ask twice. `start` is an attended command by design — if an unattended run hits an unconfigured project, take the defaults (2 workers, merge-locally-only: the safer half of each choice) and report that you did rather than waiting to be told.
+Record both in `CLAUDE.md` so you never ask twice. `start` is an attended command by design — if an unattended run hits an unconfigured project, take the defaults (3 workers, merge-locally-only: the safer half of each choice) and report that you did rather than waiting to be told.
 
-**Width is a measured decision, not a habit.** Contention, merge fan-in, tracker-numbering collisions and duplicate dispatch all scale with concurrency; each extra agent stretches every other agent's builds and multiplies reconciliation. In the 48-hour run that shaped this section, roughly a third of all commits were the fleet fixing, reconciling or re-doing its own work, and the throughput gain above 2–3 agents was never established. Widen only when the foreman can name the number that says the bottleneck is worker count, and hold "at N" as a bound backed by that number.
+**Width is a measured decision, not a habit.** Contention, merge fan-in, tracker-numbering collisions and duplicate dispatch all scale with concurrency; each extra agent stretches every other agent's builds and multiplies reconciliation. In the 48-hour run that shaped this section, roughly a third of all commits were the fleet fixing, reconciling or re-doing its own work, and the throughput gain above 2–3 agents was never established. Widen only when the foreman can name the number that says the bottleneck is worker count, and hold "at N" as a bound backed by that number. Three is the floor at which every seat has an occupant; widening adds product seats, never a fourth kind of seat.
 
 ---
 
@@ -128,17 +128,27 @@ Record both in `CLAUDE.md` so you never ask twice. `start` is an attended comman
 
 Run these in order, every cycle. Report at the end.
 
-### 1. The requests lane comes first
+### 1. Three seats, in priority order
 
-Read the requests file (`ASKS.md` or whatever `CLAUDE.md` names). **One agent must always be working its top open item.** If none is, dispatch that before anything else.
+The crew has three seats. Each has a different source of work and a different definition of done, and **all three stay filled** — the foreman never repurposes one because another queue looks urgent.
+
+| Seat | Works on | Work comes from | Done means | Exists because |
+|---|---|---|---|---|
+| **Lane** | The human's own requests | `ASKS.md`, then `request.py inbox` (other projects' asks) | The thing that was asked for | The twelve-hour miss, below |
+| **Product** | Moving the product forward | Roadmap and tracker items a *user* would notice — not tooling, not follow-ups to the fleet's own findings | A user-visible change | Meta-work self-generates and wins every salience race; product work never does |
+| **Consolidation** | Making the codebase smaller and simpler | `/slop`: the hotspot table, reinvention and duplication findings, done items in the tracker, dead code | Lines removed, concepts reduced, a smaller learning surface — **never new capability** | Nothing else in this design removes anything. This is the counter-force to accretion, and a consolidation worker that lands 400 new lines has failed even if every line is correct |
+
+Refill order on completion is lane, product, consolidation. The consolidation seat is never traded for a second product seat — that is the whole point of it. It takes only files no other seat holds a lease on.
+
+**Read the requests file first** (`ASKS.md` or whatever `CLAUDE.md` names). **One agent must always be working its top open item.** If none is, dispatch that before anything else.
 
 This rule is not decoration. On the project where it was learned, a feature the human had designed and personally approved sat unbuilt for twelve hours while agents fixed bugs *in the surface it was meant to replace* — including three bugs that only existed because the replacement hadn't landed. The backlog had grown to 120 machine-generated entries and the human's own request ranked equal with the fifth variant of a bug an agent found. Nothing was tracking that it hadn't happened.
 
 Machine-generated work will always outnumber human requests. Rank by origin, not by volume.
 
-**Reserve one slot for product work, refilled second.** Meta-work — guards, tooling, follow-ups to the fleet's own findings — is self-generating: every finding arrives with its follow-up attached. Product work never does. Without a reservation, product work loses every race decided by salience. So one non-lane slot always holds roadmap or backlog work that a user would notice, and the foreman's periodic self-check is *"is the product further along than it was this morning?"* — not "was this worth doing?"
+**The product seat exists because meta-work self-generates.** Guards, tooling, follow-ups to the fleet's own findings — every finding arrives with its follow-up attached. Product work never does. Without a reserved seat it loses every race decided by salience. The foreman's periodic self-check is *"is the product further along than it was this morning?"* — not "was this worth doing?"
 
-**Requests from other projects rank between the two.** `/request` delivers work other projects need from this one (`request.py inbox`). A blocked peer is external demand, not something the fleet invented, so it fills the lane slot whenever the human's own top ask is already in flight, and otherwise the product slot. On accept, copy it into the tracker with its id; on done, record the ref.
+**Requests from other projects** (`/request`, read with `request.py inbox`) fill the lane seat whenever the human's own top ask is already in flight — a blocked peer is external demand, not something the fleet invented. On accept, copy the request into the tracker with its id; on done, record the ref.
 
 **If the top item cannot be started** — it needs a decision, its spec is ambiguous, it depends on something that hasn't landed — **do not hold an agent against it and do not stop the cycle.** Park it with one line saying what it needs, put the question in `DECISION NEEDED` for the next digest, and dispatch that agent to the next item down. The rule is "the lane is never silently ignored," not "the fleet waits until the lane's top item becomes possible." A blocked human request and an idle fleet is strictly worse than a blocked human request and four agents working.
 
@@ -148,13 +158,13 @@ Machine-generated work will always outnumber human requests. Rank by origin, not
 
 The mechanism is a **lease**: at dispatch, write `$(git rev-parse --git-common-dir)/leases/<branch>` containing `dispatched=<timestamp>`, `agent=<id>`, `slot=lane|product|…` and the files or subsystem in scope. It lives inside `.git`, so every worktree sees it and nothing commits it. Release it explicitly when you merge that branch — an explicit act naming the branch, never a sweep inferring merge state (see *Fleet tooling*).
 
-If fewer than the configured count are running, dispatch more. Sources of work, in order:
+If a seat is empty, fill it from its own sources:
 
-1. The requests lane (always first)
-2. Requests from other projects (`request.py inbox`)
-3. The project's tracker (`TODO.md`, GitHub issues — `/bug-bash` finds it), product-facing items into the reserved slot
-4. Findings from a recent `/scorecard`
-5. **Standing candidate: another adversarial hunt round.** If the project has a UI or a device-driving recipe, a fresh hunt against the *previous* round's fixes is almost always worth an agent. In practice nearly every round finds a real bug in the last round's fix.
+- **Lane:** `ASKS.md` top open item; then `request.py inbox`, blocking first.
+- **Product:** the roadmap; then tracker items a user would notice (`/bug-bash` finds the tracker). **Hunts are rationed, not standing.** An adversarial hunt round finds real bugs — nearly every round finds one in the previous round's fix — but each finding arrives as a fix plus tests plus a tracker entry, so a hunt is a code-generation engine. Dispatch one into the product seat only when the compass (below) reads B or better *and* the tracker has fewer than 30 open items. Otherwise the product seat takes product work.
+- **Consolidation:** run `/slop`; take the top hotspot file not under lease, the first reinvention finding, or the tracker's done items. The brief is one of: split the largest function in the hottest file; fold a duplicate into the existing one; move done items older than 30 days to `TODO-archive.md`; delete code nothing calls. Never "and while you're there."
+
+Scorecard findings are not a source of work. They are a reading (see *The compass*).
 
 **Dispatch on completion, never on noticing.** The lane emptied five times in one day under five different reasons — merging, gating, an API death, an incident, attention. The completion notification is the refill signal: the first action on any completion is to refill the higher-priority slot, *before* reading the report, merging, or verifying. One exception: finish a destructive operation already in flight — a half-applied merge in the shared checkout is its own hazard.
 
@@ -210,6 +220,20 @@ The morning test is not "was each stall legitimate?" — each one usually is. It
 
 ---
 
+## The compass, and when to stop
+
+A fleet with one objective — verified throughput — and no counter-force converts compute into accretion. On the project that showed this, six days of fleet work added 140K production lines and removed 18K; the only net-deleting commits were the human's. Every commit was chosen and every one passed the gate. The *codebase* still got worse to work in. Correctness is not the objective; it is a constraint. The objective is that the product is further along **and** the codebase is no harder to change than it was this morning.
+
+**The compass.** Every 10 cycles, run `/slop --quick` and `/scorecard --quick` and append one line to `$(git rev-parse --git-common-dir)/compass.log`: `<iso> slop=<grade> scorecard=<grade> prod_loc=<n> pub_names=<n>` (the last two from `slop_surface.py`). Compare to the previous line. A slop grade that fell, or sits below B, redirects the next product-seat dispatch to consolidation and suspends hunts until it recovers. This is scorecard and slop used as a *measurement of whether the fleet is helping*, not as a source of more tasks.
+
+**Provenance.** Every merge appends to `$(git rev-parse --git-common-dir)/landings.log`: `<sha> <seat> <source: asks|inbox|roadmap|tracker|hunt|consolidation>`. This is what makes the next two rules mechanical instead of moods.
+
+**The stop condition** (a pre-commitment of the binding kind — it must not yield to "but the queue is full"): if the last 20 landings include none from `asks` or `inbox`, and the compass has not improved across its last two readings, **pause the fleet** and report: *"the fleet is feeding itself."* The human decides whether it continues. A team that cannot stop is not one you can leave unattended.
+
+**The 8-hour check-in reports outcome, not activity.** Add to the format in *What reaches the human*, all of it computed from git and therefore *measured*: production lines added and deleted since the last check-in; public surface delta; slop and scorecard grade movement; and **the share of landings from `asks`/`inbox` versus the machine's own queue.** "In 8 hours: +12K lines, −400, surface +8%, 0 of 14 landings were things you asked for" is the sentence that tells the human whether the night was worth it.
+
+---
+
 ## Dispatching an agent
 
 Every brief carries five things. The body of the work can be an existing skill — tell the agent to run `/bug-bash` or `/scorecard` in its worktree where that fits, rather than restating the loop.
@@ -241,7 +265,7 @@ Also name the project's shared singletons and how to avoid them (create your own
 
 **4. Rules of evidence** — see below. Paste them in; do not assume they are known.
 
-**5. Deliverable** — branch name, where findings go, and *"an honest list of what you did not fix and why."* Ask for this explicitly and it usually arrives; omit it and it never does.
+**5. Deliverable** — branch name, where findings go, and *"an honest list of what you did not fix and why."* Ask for this explicitly and it usually arrives; omit it and it never does. **And the thesis, before implementing:** the worker's first commit body carries `Thesis: <one sentence that accounts for the whole change>` and `Surface: <public names, options, special cases added or removed, and why>`. Not "make it small" — "make it chosen." The gate refuses a branch without them, so it is a mechanism, not a request. A consolidation brief adds: *lines removed and concepts reduced are the deliverable; new capability is a failure.*
 
 ### Model tiering
 
@@ -334,6 +358,9 @@ grep -qE '^error' "$SCRATCH/lint-$SHA-$$.log" && { echo "LINT FAILED"; exit 1; }
 if grep -qE '^error|test result: FAILED' "$SCRATCH/test-$SHA-$$.log"; then
   echo "TESTS FAILED"; grep -E '^error|FAILED|panicked' "$SCRATCH/test-$SHA-$$.log" | head -20; exit 1
 fi
+# Shape, not just correctness. Exit 2 = return to the worker with the printed reasons; it is not a failure of the code.
+python3 ~/.claude/skills/slop/scripts/slop_diff.py --repo "$REPO" "main..$BRANCH" --require-thesis \
+  || { echo "RETURN TO WORKER: shape check did not pass (see reasons above)"; exit 2; }
 echo "GATES PASS on $SHA in isolation"
 cd "$REPO"
 [ "$(git rev-parse HEAD)" = "$SHA" ] || { echo "REFUSING: HEAD moved during gating"; exit 1; }
@@ -352,6 +379,7 @@ Why each guard exists, all of them from real incidents:
 - **HEAD-unchanged check** — between gating and pushing, another agent can move it.
 - **Verification worktree, separate from the gate's own** — a pre-fix/post-fix comparison run directly in the shared checkout reverted several already-merged files' working-tree content back to their pre-fix state while `HEAD` still had the fix, and it was first misdiagnosed as a second agent colliding on the repo before the real cause (verification, not merging, done outside isolation) was found.
 - **Verdict file, not report** — see step 3. The gate is the first complete check.
+- **Shape check** — the gate verified correctness and never shape, so a 600-line change fixing a 3-line bug passed, a function duplicating an existing one passed, six theses in one commit passed. `slop_diff.py` returns a branch to its worker when a fix deletes nothing and names no `Cause:`, when public surface grows with no `Surface:` line saying why, when there is no `Thesis:` trailer, or when a new function reinvents an existing one. Returned is not failed: the worker answers the question and resubmits.
 
 **The instruction is advisory; the guard is the control.** This is the most-repeated lesson in the whole method. Agents were told in plain language, in every single dispatch, not to touch the shared checkout — and did it eight times anyway. What contained it every time was the branch guard refusing to run. When something must not happen, build the thing that refuses.
 
@@ -473,7 +501,7 @@ Retro also proposes **deletions** — rules that have never fired since being ad
 
 ## Cost
 
-Two workers and a foreman running continuously is not cheap; five is much more than two-and-a-half times it, because contention taxes every agent. Say so plainly on the first run of a project, and make the count easy to change. Throughput is the point, but an unattended overnight run is a real spend and the human should choose it deliberately.
+Three workers and a foreman running continuously is not cheap; five is far more than five-thirds of it, because contention taxes every agent. Say so plainly on the first run of a project, and make the count easy to change. Throughput is the point, but an unattended overnight run is a real spend and the human should choose it deliberately.
 
 ---
 
