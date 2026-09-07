@@ -106,6 +106,7 @@ For a specific task, outside the loop.
 
 | Skill | Description |
 |-------|-------------|
+| `docs` | Plan and write user documentation — Diátaxis structure, audience first, a reader test before merge |
 | `readme` | Generate or update project README documentation |
 | `release-setup` | Set up automated cross-platform binary releases for a Go project |
 | `tool-web` | Build a lightweight single-file web application with no external dependencies |

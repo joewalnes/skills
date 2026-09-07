@@ -81,6 +81,7 @@ Launch these investigations simultaneously using the Task tool with subagent_typ
 - Check for contradictions between different docs
 - Verify that documented features actually exist in code
 - Check if claimed metrics (coverage %, performance numbers) are substantiated
+- Read one user-facing page as a first-time reader: can you say what it's for and what to do next? Does it talk about how it was produced instead of the subject? (`/docs` has the standard)
 
 **Agent 5 — Performance & Duplication:**
 - Identify hot paths (rendering loops, request handlers, per-frame/per-request code)

@@ -78,10 +78,10 @@ Is the type system used effectively? (Grade within the language's capabilities �
 - **N/A**: Language has no type system (Python without hints, Perl, shell scripts) — skip this dimension and redistribute weight
 
 ### 10. Documentation (Weight: Medium)
-Is the project documented? Are docs accurate?
-- **A**: Comprehensive, accurate, up-to-date docs; code is self-documenting where appropriate
-- **B**: Good docs with minor gaps or slightly stale references
-- **C**: Docs exist but have inaccuracies, stale references, or significant gaps
+Is the project documented, accurately, *for a reader*? Grade against `/docs`: does each page serve one Diátaxis mode (tutorial / how-to / reference / explanation) or does it blur them? Is there a named reader? Does the first sentence answer? Does any page talk about how the documentation was produced or verified (the "development notes" defect)? Is generated reference single-sourced with a drift check that fails? Apply the reader test to one page: could someone who hasn't seen the code say what it's for and what to do next?
+- **A**: One mode per page, a stated audience, front-loaded answers, generated reference with a proven drift check, passes the reader test
+- **B**: Good docs with minor gaps or slightly stale references; a page or two blur modes
+- **C**: Docs exist but read as development notes, mix modes, or have stale references and gaps
 - **D**: Minimal or mostly wrong documentation
 - **F**: No documentation, or docs that actively mislead
 
