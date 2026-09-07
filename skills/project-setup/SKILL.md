@@ -154,6 +154,7 @@ Add to `CLAUDE.md`:
 ```
 ## Commits
 Break work into small atomic commits — one logical change per commit. Don't bundle unrelated changes. A bug fix, a new feature, and a refactor are three commits, not one.
+Commit often while working; before pushing, run `/consolidate` so the fix-the-fix trail lands as the changes it was.
 ```
 
 ---
