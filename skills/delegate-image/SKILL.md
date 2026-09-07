@@ -1,51 +1,70 @@
 ---
 name: delegate-image
-description: Generate an image with a 3-model panel and two independent judges. Use for logos, product shots, photos, or image edits.
-argument-hint: <image description>
+description: Generate a visual — SVG via text models (Astra) for logos and diagrams, a raster panel for photos — judged by two independent models. Use for any image ask.
+argument-hint: <what the visual should be>
 ---
 
-# Delegate: image generation panel
+# Delegate: visuals — pick the output type, then the panel
 
-Claude models can't generate images. This delegates to a **panel of 3 image-generation models run in parallel**, followed by **2 independent vision-model judges** that each critique and pick a favorite — so the user sees every option plus outside opinions, not just one model's guess.
+Claude can't generate raster images, but it can write SVG, and so can any capable text model. So the first decision is not which model — it's **which kind of file the user actually wants.** Get that wrong and a photorealistic model produces a blurry logo, or a vector model is asked for a sunset.
 
-Joe generates images rarely, so the 3-model panel is the default even though it costs ~3x a single generation (~$0.24 total) — don't downgrade to a single cheap model to save money unless asked.
+## 1. Choose the output type
 
-All calls route through `pi` (already configured with the user's OpenRouter key) — never ask for or echo API keys.
+| The ask | Output | Why |
+|---|---|---|
+| Logo, mark, icon, badge, diagram, chart, schematic, pictogram — anything with flat shapes, text, or that must scale, be edited, or **animate** | **SVG** | Resolution-independent, editable, tiny, animatable with CSS or SMIL, and reviewable as source. The user will want to change a colour or a word later; with a PNG they can't. |
+| Photo, scene, person, product shot, texture, illustration with lighting and depth — anything photorealistic or painterly | **Raster** (PNG) | This is what image-generation models are for; no text model can do it. |
+| "Animated logo", "loading spinner", "hero animation" | **SVG with animation** | CSS `@keyframes` inside `<style>` (broadest support) or SMIL; the static first frame must stand on its own. |
 
-**Zero data retention (ZDR):** the user's OpenRouter account rejects non-ZDR endpoints. This is why OpenAI's image models (`gpt-5.4-image-2`, `gpt-5-image`, `gpt-5-image-mini`) aren't in the roster below — they have no ZDR endpoint on OpenRouter and 404. Don't suggest loosening the account policy to use them.
+When in doubt: *if the user would ever want to edit it, it's SVG.* Say which type you chose and why in one line; if the ask genuinely straddles (a logo *and* a photo of it on a mug), do both.
 
-## The roster (benchmarked 2026-09-01)
+## 2a. SVG panel — text models
 
-Only Google Gemini models actually generate images on OpenRouter — GPT Sol/Terra, Meta Muse, and Minimax M3 accept image input but don't output images; no Qwen image model exists there. Of Gemini's 4 tiers, a blind panel test (4 prompts: 2 logos, 2 photorealistic scenes, judged by Kimi with model identity hidden) ranked:
-
-| Rank | Model | Avg blind rank | Notes |
-|---|---|---|---|
-| 1 | `google/gemini-3.1-flash-image` | 1.8 | Won 3 of 4 test prompts; best all-rounder |
-| 2 | `google/gemini-2.5-flash-image` ("nano banana") | 2.0 | Won the photorealistic nature shot |
-| 3 | `google/gemini-3-pro-image` ("nano banana pro") | 3.2 | Won the logo test; most detail-dense on complex scenes; priciest (~$0.14/img) |
-
-`google/gemini-3.1-flash-lite-image` was dropped — it ranked last on all 4 test prompts despite being cheapest. Price didn't track quality in this test; Pro's higher detail didn't reliably beat Flash.
-
-## Execution — one Agent call, one clean response
-
-Treat this skill like a function call: the user invokes it and expects **3 images + 2 quick critiques back in a single response**, not a play-by-play. All the mechanics (generation, judging, retries, sanity-checking judges) happen inside **one Agent tool call** (default general-purpose agent). The Agent call runs asynchronously and returns via a task-notification, not inline — so after dispatching it, say nothing further and just wait. Don't narrate intermediate steps, don't use ScheduleWakeup or poll for progress, don't send an interim "generating now" message. The single notification that arrives when it finishes is your cue to write the one final reply.
-
-Dispatch a single Agent call with a fully self-contained prompt (the subagent starts with zero context), something like:
-
-```
-Generate an image panel for: "<prompt, expanded from the user's ask: subject, style, composition, background, lighting>"
-
-1. Run `python3 <skill-dir>/scripts/image-panel.py "<prompt>" <output-dir>` — generates flash.png, nano-banana.png, pro.png in parallel (~30-120s).
-2. Run two independent judge critiques SEQUENTIALLY (not in parallel — concurrent calls to the same model can trip OpenRouter's credit hold):
-   cd <output-dir> && pi -p --no-tools --no-session --provider openrouter --model moonshotai/kimi-k2.5 -- @flash.png @nano-banana.png @pro.png "These 3 images (in order: flash, nano-banana, pro) were each generated from the same prompt: '<prompt>'. For each, give a 1-sentence critique, then pick your favorite with a 1-sentence reason."
-   ...then the same with --model z-ai/glm-4.6v.
-   Before trusting either judge, confirm it actually has vision (`pi --list-models <name>` shows `images: yes`) and that its critique cites specific visual details rather than generic praise or the prompt/filenames restated — a vision-less model will fabricate a plausible-sounding critique instead of erroring (seen with kimi-k2-thinking). If a judge 402s ("requires more credits, or fewer max_tokens"), retry it alone, or swap to a smaller-max-output vision model (check the `max-out` column in `pi --list-models`).
-3. Send all 3 images to the user via SendUserFile (display: render), one call, brief caption.
-4. Return ONLY: each judge's pick + 1-sentence reason, your own 1-sentence recommendation, and total cost (sum from panel-manifest.txt). No step-by-step narration, no manifest dumps. If any image is a photorealistic depiction of a real identifiable person, say so in one line and note it wasn't published anywhere shareable.
+```bash
+python3 <skill-dir>/scripts/svg-panel.py "<prompt>" <output-dir> [--models openai/gpt-6-astra,z-ai/glm-5.3]
+python3 <skill-dir>/scripts/svg-panel.py --render-only <output-dir>/claude.svg
 ```
 
-To edit/reference an existing image instead of a fresh panel, skip the Agent dispatch and call `scripts/generate-image.py` directly with `-i input.png` on a single model — that's a quick single call, not worth delegating.
+- **Models:** `openai/gpt-6-astra` (ZDR on OpenRouter, ~$0.10 per graphic at $10/$50 per Mtok — the strongest text model available for this) and `z-ai/glm-5.3`. Astra is used **only here** — it has no image output, so it never appears in the raster panel.
+- **Claude's own entry.** The Agent running this also writes one itself as `<output-dir>/claude.svg`, then renders it with `--render-only`. Three entries, three lineages.
+- The script asks each model for *only* an SVG, extracts the first `<svg>…</svg>`, rejects anything that doesn't parse as XML, saves `<model>.svg`, and renders `<model>.png` with `rsvg-convert` so the judges can *see* it. Animated SVGs render as their first frame.
+- **Write the prompt for a vector artist**: shapes and their relationship, palette as hex, "no text" unless wanted, target sizes ("works at 32px"), and for animation: what moves, how long, and that the first frame must be presentable.
 
-## After the Agent returns
+## 2b. Raster panel — image models
 
-Relay its result in **one short message**: which model each judge picked and why (one line each), your own take, and the cost — that's it. Don't re-explain the roster, the judge mechanics, or repeat what's already visible in the sent images.
+```bash
+python3 <skill-dir>/scripts/image-panel.py "<detailed prompt>" <output-dir>
+```
+
+Runs three Gemini image tiers in parallel (the only ZDR-clean image generators on OpenRouter — OpenAI's image models have no ZDR endpoint), saves `flash.png`, `nano-banana.png`, `pro.png`, and writes per-model cost. Benchmarked 2026-09-01 on 4 prompts, blind-judged:
+
+| Rank | Model | Notes |
+|---|---|---|
+| 1 | `google/gemini-3.1-flash-image` | Won 3 of 4; best all-rounder |
+| 2 | `google/gemini-2.5-flash-image` ("nano banana") | Won the photorealistic nature shot |
+| 3 | `google/gemini-3-pro-image` | Won the logo test; priciest (~$0.14/img) — but logos are SVG now |
+
+The user generates images rarely, so the 3-model panel (~$0.24) is the default; don't downgrade to one model to save money unless asked. To edit an existing raster, call `scripts/generate-image.py` directly with `-i input.png`.
+
+## 3. Two independent judges — same for both panels
+
+Sequentially (concurrent calls can trip OpenRouter's credit hold), two vision models from lineages other than the generators':
+
+```bash
+cd <output-dir> && pi -p --no-tools --no-session --provider openrouter --model moonshotai/kimi-k2.5 -- @a.png @b.png @c.png "<judge prompt>"
+cd <output-dir> && pi -p --no-tools --no-session --provider openrouter --model z-ai/glm-4.6v      -- @a.png @b.png @c.png "<judge prompt>"
+```
+
+For **raster**: "These N images were generated from the prompt '<prompt>'. For each, a one-sentence critique; then your favourite with a one-sentence reason."
+
+For **SVG**, attach the PNGs *and* paste the SVG sources, and ask additionally: does it read as the concept at 32px and at 256px; is the source clean (a `viewBox`, no embedded rasters, no scripts, sane path count); for animation, does the described motion serve the mark or decorate it. A judge that can't see images will still produce a plausible critique from filenames — confirm `pi --list-models <name>` shows `images: yes`, and that the critique cites visual specifics.
+
+## 4. Execution — one Agent call, one clean response
+
+The user invokes this and expects **the files plus two quick critiques in a single response**, not a play-by-play. All of it — the type decision, the panel, Claude's own SVG, rendering, judging — happens inside **one Agent tool call** (general-purpose). It runs asynchronously; after dispatching, say nothing and wait for the completion notification. Brief the agent with the ask, the type you chose, both command lines, the judge prompts, and: send every output with SendUserFile (`display: render`; for SVG send both the `.svg` and its `.png`), then return **only** each judge's pick and one-sentence reason, your own one-sentence recommendation, and cost.
+
+If any raster is a photorealistic depiction of a real, identifiable person, say so in one line and keep it out of anything published.
+
+## 5. After the Agent returns
+
+Relay in one short message: which entry each judge picked and why, your own take, the cost. Nothing about mechanics.
