@@ -7,14 +7,10 @@
 
 ## Open
 
-- [~] **P2** (feature) delegate-image: choose the output type; Astra for SVG — Joe asked, 2026-09-07
-  Judge output type per request: logos, icons and diagrams are usually better as SVG (text — authored
-  directly, reviewable, animatable via SVG/CSS); photos and scenes stay raster. When SVG is the right
-  type, the panel is text models: GPT-6 Astra (ZDR on OpenRouter, confirmed by Joe) alongside the
-  existing models. When raster, Astra is not used. Same two-judge review either way; judges see
-  the SVG rendered, not the source.
-
 ## Done
+
+- [x] **P2** (feature) delegate-image: choose the output type; Astra for SVG — Joe asked, 2026-09-07 — 2026-09-07
+  Resolved: output-type decision first; SVG panel (svg-panel.py: Astra + GLM 5.3 + Claude's own entry, XML-validated, rendered with rsvg-convert for the judges, animation only when asked); raster panel unchanged; Astra never used for raster.
 
 - [x] **P1** (feature) go-team: apply the 48h fleet retro fixes — Joe asked, 2026-09-07 — 2026-09-07
   Resolved: heartbeat installed+verified by start, bypass instruction first, one preflight question + 10m timeout, foreman agent without AskUserQuestion, Done: lines, computed lane line, honest provenance, compass as script output; plus a computed heartbeat line replacing silence, push notifications, /fleets.
