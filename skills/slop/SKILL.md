@@ -1,6 +1,6 @@
 ---
 name: slop
-description: Audit a codebase or a branch for AI slop — unchosen code that grows the learning surface without adding leverage. Grades on articulability and surface area, with git-history trends as evidence and classic smells only as weak hints. Use on a repo to see whether it's accreting, or on a branch before merging.
+description: Find unchosen code — surface area growing without leverage. Use pre-merge on a branch, or to check if a repo is accreting.
 argument-hint: [branch | rev-range | --explain | --quick]
 ---
 

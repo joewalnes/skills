@@ -1,6 +1,6 @@
 ---
 name: delegate-review
-description: Get an independent second-opinion code review of Claude's own work from a different model lineage (Kimi K3, or GPT 5.6 Sol as alternate) via pi. Use when the user wants Claude's work checked by another AI, not just self-reviewed.
+description: Independent code review of Claude's own work by a different model lineage (Kimi) via pi. Use when a second opinion is wanted.
 argument-hint: <what to review>
 ---
 

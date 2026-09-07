@@ -107,7 +107,6 @@ For a specific task, outside the loop.
 | `readme` | Generate or update project README documentation |
 | `release-setup` | Set up automated cross-platform binary releases for a Go project |
 | `tool-web` | Build a lightweight single-file web application with no external dependencies |
-| `hello-world` | A simple test greeting skill |
 
 ## Development
 

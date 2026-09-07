@@ -1,6 +1,6 @@
 ---
 name: delegate-image
-description: Generate an image via a panel of the 3 top-ranked OpenRouter image models in parallel, then have two independent AI judges each critique and pick their favorite. Use when the user asks to generate a logo, product shot, photorealistic image, or edit an image.
+description: Generate an image with a 3-model panel and two independent judges. Use for logos, product shots, photos, or image edits.
 argument-hint: <image description>
 ---
 

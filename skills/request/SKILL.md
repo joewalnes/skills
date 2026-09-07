@@ -1,6 +1,6 @@
 ---
 name: request
-description: Ask another project's agents to do work — file a request into that project's inbox instead of editing its checkout. Also reads this project's inbox and outgoing requests. Use when a fix or change is needed in a different repository (a dependency, a sibling project, the skills repo).
+description: Ask another project's agents for a change instead of editing their repo. Use when a fix belongs in another repository.
 argument-hint: <project> "<title>" | inbox | sent | show <id> | accept|decline|done <id>
 ---
 

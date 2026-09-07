@@ -1,6 +1,6 @@
 ---
 name: sitrep
-description: Quick situation report — recap where we left off, what's in progress, what's uncommitted, and what to do next. Use when resuming a session or asking "where were we?"
+description: Where were we? Branch, in-progress work, blocked agents, inbox, next steps. Use when resuming a session.
 allowed-tools: Read, Glob, Grep, Bash, Agent, ListAgents, TaskOutput
 ---
 

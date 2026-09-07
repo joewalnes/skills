@@ -1,6 +1,6 @@
 ---
 name: delegate-bulk
-description: Delegate high-volume, low-intelligence grunt work — mass content review, generating test/sample data, mechanical transforms — to a cheap ZDR-compliant model via pi. Non-private data only.
+description: Bulk low-judgement work on a near-free model via pi: mass review, sample data, mechanical rewrites. Non-private data only.
 argument-hint: <task>
 ---
 

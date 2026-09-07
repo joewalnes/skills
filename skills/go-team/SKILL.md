@@ -1,6 +1,6 @@
 ---
 name: go-team
-description: Run a crew of parallel agents on a project — dispatch, verify behaviourally, gate, merge. For long unattended sessions where you want throughput without trusting the reports.
+description: Run a crew of agents unattended: dispatch, verify in isolation, gate, merge. Use for overnight runs on a wide backlog.
 argument-hint: [start | retro | status | --agents N]
 ---
 

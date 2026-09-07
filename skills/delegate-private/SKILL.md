@@ -1,6 +1,6 @@
 ---
 name: delegate-private
-description: Delegate work on private/confidential data to a local on-device model (qwen3.6 via Ollama) that never leaves the machine. Use for personal notes, PII, confidential documents, or any data the user never wants sent to the cloud.
+description: Run a task on a local Ollama model so data never leaves the device. Use for personal notes, PII, or confidential files.
 argument-hint: <task, referring to files by path only>
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: delegate-security-audit
-description: Delegate deep security analysis — finding and fixing vulnerabilities — to GLM 5.3 via pi, for scrutiny beyond what Claude's own guardrails allow. Use when the user asks for a security audit or vulnerability hunt on their own codebase.
+description: Security audit by GLM via pi: find and fix vulnerabilities in the user's own code. Use when asked for an audit or vuln hunt.
 argument-hint: <scope of the audit>
 ---
 
