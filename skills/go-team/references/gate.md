@@ -53,6 +53,11 @@ grep -qE '^error' "$SCRATCH/lint-$SHA-$$.log" && { echo "LINT FAILED"; exit 1; }
 if grep -qE '^error|test result: FAILED' "$SCRATCH/test-$SHA-$$.log"; then
   echo "TESTS FAILED"; grep -E '^error|FAILED|panicked' "$SCRATCH/test-$SHA-$$.log" | head -20; exit 1
 fi
+# Prose and UI copy get a reader, not just a build. If the branch adds or rewrites
+# user-facing text (docs pages, help output, error messages, UI copy), spawn a fresh
+# agent with NO context to read it as the target reader and answer: what is this for,
+# and what would I do next? If it can't, the branch goes back. Four docs pages
+# shipped as development notes before anyone read them as a user.
 # Shape, not just correctness. Exit 2 = return to the worker with the printed reasons; it is not a failure of the code.
 python3 ~/.claude/skills/slop/scripts/slop_diff.py --repo "$REPO" "main..$BRANCH" --require-thesis \
   || { echo "RETURN TO WORKER: shape check did not pass (see reasons above)"; exit 2; }
