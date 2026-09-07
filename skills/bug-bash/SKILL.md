@@ -67,12 +67,7 @@ For each bug, in priority order:
 
 ### Step 1: Understand
 
-Read the bug description carefully. Identify:
-- What is the expected behavior?
-- What is the actual (broken) behavior?
-- What files/modules are likely involved?
-
-Use Grep, Glob, and Read tools to find the relevant code. Understand the current implementation before changing anything.
+Establish expected versus actual behaviour and the code involved. Understand the current implementation before changing it.
 
 ### Step 2: Reproduce
 
@@ -90,10 +85,10 @@ If you cannot reproduce the bug or confirm it exists in the current code:
 
 ### Step 3: Fix
 
-Implement the fix. Follow these principles:
-- **Minimal change**: Fix the bug, don't refactor the neighborhood. Keep the diff small.
-- **Match existing patterns**: Follow the codebase's conventions for style, naming, and error handling.
-- **No drive-by changes**: Don't fix unrelated issues in the same commit. If you spot another bug, add it to the bug tracker — don't fix it inline.
+Implement the fix:
+- **One thesis per fix.** Fix the cause, not the symptom — a fix that only adds a guard should say in its commit body why the case was genuinely missing. Don't refactor the neighbourhood unless the fix requires it; if it does, the commit says so. Size isn't the measure; whether it shrinks or holds the learning surface is.
+- **Match existing patterns** for style, naming, and error handling.
+- **No drive-by changes.** If you spot another bug, add it to the tracker — don't fix it inline.
 
 ### Step 4: Test
 
@@ -103,11 +98,7 @@ Verify the fix thoroughly:
 2. **Run the full test suite**: Compare against the baseline from Phase 1. If any previously-passing test now fails, your fix introduced a regression.
    - If regression: **revert your changes**, note the conflict in the bug tracker ("Fix attempted but caused regression in X — needs more careful approach"), and move on.
 3. **Add or update tests** for the fixed behavior if a test didn't already exist
-4. **Interactive/E2E testing** if the project supports it (especially for UI bugs):
-   - For TUI apps: build, launch in tmux, interact, capture pane output
-   - For web apps: start the server, curl endpoints or check browser
-   - For CLI tools: run with various inputs and check output
-   - For libraries: ensure the public API still works as documented
+4. **Drive the real thing** if the project has a recipe for it (`CLAUDE.md`'s verification recipe) — especially for UI bugs. Tests exercise the mechanism; this exercises the integration.
 
 ### Step 5: Clean Up
 
@@ -196,7 +187,7 @@ Push the branch if on a feature branch. Report the summary to the user.
 
 You are working unassisted. When a decision is required:
 
-1. **Prefer the conservative option.** If unsure between two approaches, pick the one that changes less code and has less risk.
+1. **Prefer the option you can explain.** If unsure between two approaches, pick the one whose thesis fits in a sentence and doesn't grow the public surface — not simply the one with the smaller diff.
 2. **Follow existing patterns.** If the codebase does X one way everywhere, do it the same way — even if you think another way is better.
 3. **Don't gold-plate.** Fix the bug as described. Don't add features, extra configurability, or "while I'm here" improvements.
 4. **When in doubt, skip.** It's better to skip a bug and let a human decide than to make a bad fix that introduces a regression.

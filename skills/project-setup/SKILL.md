@@ -158,23 +158,19 @@ Break work into small atomic commits — one logical change per commit. Don't bu
 
 ---
 
-### 6. Test and Lint Before Committing
+### 6. Lint and Tests as Mechanisms, Not Reminders
 
-**Pitch:** Catch breakage before it enters the history. Simple rule, big payoff.
+**Pitch:** Catch breakage before it enters the history — with something that refuses, not a sentence asking nicely. Current models run tests unprompted; a "remember to test" rule adds noise and *unnecessary* testing. What they can't do is make a failing state uncommittable. A hook can.
 
-**Implementation:** First, identify the project's test and lint commands (look at `package.json` scripts, `Makefile`, CI config, etc.). Then add to `CLAUDE.md`:
+**Implementation:** Identify the project's lint and test commands (`package.json` scripts, `Makefile`, CI config). Install a pre-commit hook that runs the lint command, and a `check` script that runs every instrument and writes `.verdict` (see step 13 for the template). Then add to `CLAUDE.md`:
 
 ```
 ## Pre-commit checks
-Always run tests and linting before committing:
-\`\`\`bash
-<test command>    # e.g. npm test, pytest, go test ./...
-<lint command>    # e.g. npm run lint, ruff check, golangci-lint run
-\`\`\`
-Do not commit if tests fail or lint errors are present. Fix first.
+Lint runs in the pre-commit hook; `scripts/check.py` runs the full suite and writes `.verdict`.
+Never bypass the hook (`--no-verify`) and never commit over a failing `.verdict` — fix first.
 ```
 
-Adapt the commands to whatever the project actually uses. If there's no test/lint setup, flag that as a gap and offer to help set it up.
+If there's no test or lint setup at all, flag that as a gap and offer to set one up.
 
 ---
 
@@ -249,7 +245,7 @@ Add to `CLAUDE.md`:
 
 When the user gives multiple requests:
 1. Queue them mentally but complete ONE fully before starting the next
-2. "Complete" means: code written, built, deployed to Docker, tested with rodney, verified working
+2. "Complete" means: built, run, and verified working end to end by the project's own verification recipe — not "the tests pass"
 3. If a request involves UI: screenshot the result and confirm it matches what was asked
 4. Never mark something done until you've verified it works end-to-end
 5. If you can't complete a request in one go (e.g., blocked by data issues), say so explicitly rather than half-doing it and moving on
