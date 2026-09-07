@@ -76,7 +76,7 @@ python3 ~/.claude/skills/slop/scripts/slop_diff.py --repo "$REPO" "main..$BRANCH
 echo "GATES PASS on $SHA in isolation"
 cd "$REPO"
 [ "$(git rev-parse HEAD)" = "$SHA" ] || { echo "REFUSING: HEAD moved during gating"; exit 1; }
-git push -q origin main                 # omit if autonomy policy is merge-only
+git push -q origin main                 # omit if autonomy policy is merge-only; the pre-push gate refuses a main that isn't consolidated
 rm -f "$(git rev-parse --git-common-dir)/leases/$BRANCH"   # release the lease BY NAME — you know which branch you merged
 echo "PUSHED $(git rev-parse HEAD)"
 git worktree remove --force "$T" 2>/dev/null || true   # last, and never fatal
