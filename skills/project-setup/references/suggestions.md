@@ -309,6 +309,7 @@ Then scaffold the files:
   ```
 - **A pre-commit hook** that runs the lint instrument, so a failing lint state is uncommittable — there's nothing to misreport. Optionally also refuse a commit whose subject says "fix" and whose diff deletes nothing unless the body names a `Cause:` — the cheapest mechanical check against fix-by-addition.
 - **Leases.** Nothing to create; just note in `CLAUDE.md` that dispatch writes `$(git rev-parse --git-common-dir)/leases/<branch>` and merge removes it by name.
+- **The push gate.** Nothing to create per repo: `/consolidate` installs a machine-wide pre-push hook via `core.hooksPath` that refuses a range that isn't one commit per feature or fix. On a new machine: `git config --global core.hooksPath ~/.claude/skills/consolidate/hooks`. It chains to this repo's `.git/hooks/*`, so the pre-commit lint hook above keeps running.
 - **The foreign-repo guard.** Add to `.claude/settings.json` (merge, don't replace):
   ```json
   {"hooks": {"PreToolUse": [{"matcher": "Edit|Write|MultiEdit|NotebookEdit",

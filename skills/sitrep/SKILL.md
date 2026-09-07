@@ -20,7 +20,8 @@ Run these in parallel:
 6. `python3 ~/.claude/skills/request/scripts/request.py inbox` and `… sent` — work other projects have asked of this one, and what this one is waiting on elsewhere (skip silently if the script isn't installed)
 7. `ASKS.md` (or whatever `CLAUDE.md` names as the requests lane), if present — the human's own top open ask
 8. If `$(git rev-parse --git-common-dir)/leases/` is non-empty, `CronList` — a fleet with leases and no scheduled `/go-team` job is a fleet nobody is ticking (measured: four such fleets sat 90–99% idle). That goes under **Needs you**.
-9. Scan the conversation history you have in context for what was last discussed
+9. `python3 ~/.claude/skills/consolidate/scripts/consolidate.py --check` — one line: is the unpushed range reader-ready, or how many commits would become how many (the pre-push gate will refuse the latter)
+10. Scan the conversation history you have in context for what was last discussed
 
 ### Reading the agent roster
 
@@ -75,6 +76,8 @@ Use this structure. **Omit any section that's empty.** Keep each section to 1–
 **Inbox:** Requests from other projects (`request.py inbox`): count, and the blocking ones by title. **Sent:** what this project is waiting on elsewhere, and anything that turned `done` since last time (with its ref). Omit either when empty.
 
 **Background:** Agents/sessions currently working, one line each — name and what it's on. Collapse idle/offline ones to counts. Note anything that finished since the last check.
+
+**Unpushed:** the `--check` line — `11 commits, reader-ready`, or `56 → 41: run /consolidate before pushing`. Omit when nothing is unpushed.
 
 **Uncommitted changes:** Brief summary of dirty files — group by intent (e.g. "new feature in X, test updates in Y") not just file names.
 
