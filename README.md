@@ -85,6 +85,8 @@ Most of these skills are designed to run as one loop, not as isolated commands. 
 | `scorecard` | Periodic audit; findings feed back into the tracker |
 | `slop` | Audit for *unchosen* code — accretion trends on a repo, or a pre-merge check on a branch |
 | `request` | Ask another project's agents to do work — a mailbox outside every checkout, so nobody edits anyone else's repo |
+| `consolidate` | Rebuild unpushed commits into clean atomic ones by theme before pushing; go-team's gate runs it on worker branches |
+| `retro` | Evidence-first retrospective from a session's transcripts and repo, when the process isn't working |
 
 ## On-demand skills
 
