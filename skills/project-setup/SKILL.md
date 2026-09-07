@@ -136,7 +136,7 @@ Update `CHANGELOG.md` with every commit. Format: grouped by date (newest first),
 
 ### 4. Regular Scorecard
 
-**Pitch:** Periodic code quality audits catch problems before they accumulate. The `/scorecard` skill grades your codebase across 13 dimensions.
+**Pitch:** Periodic code quality audits catch problems before they accumulate. The `/scorecard` skill grades your codebase across 14 code dimensions and 5 agent-readiness ones.
 
 Add to `CLAUDE.md`:
 ```
