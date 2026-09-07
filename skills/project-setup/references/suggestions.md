@@ -248,6 +248,7 @@ Derive the list rather than guessing: read the build/test commands out of the pr
 ```json
 {
   "askUserQuestionTimeout": "10m",
+  "inputNeededNotifEnabled": true,
   "permissions": {
     "defaultMode": "acceptEdits",
     "allow": [
@@ -258,7 +259,7 @@ Derive the list rather than guessing: read the build/test commands out of the pr
 }
 ```
 
-`askUserQuestionTimeout` makes a question the human isn't there to answer auto-continue with its recommended default after ten minutes, instead of holding an unattended run all night — one fleet's first preflight question sat for fourteen hours.
+`inputNeededNotifEnabled` pushes a mobile notification when a permission prompt or question is waiting — a stalled fleet then interrupts the human instead of waiting for them. `askUserQuestionTimeout` makes a question the human isn't there to answer auto-continue with its recommended default after ten minutes, instead of holding an unattended run all night — one fleet's first preflight question sat for fourteen hours.
 
 Two things worth flagging when you suggest this:
 

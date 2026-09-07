@@ -87,6 +87,7 @@ Most of these skills are designed to run as one loop, not as isolated commands. 
 | `request` | Ask another project's agents to do work — a mailbox outside every checkout, so nobody edits anyone else's repo |
 | `consolidate` | Rebuild unpushed commits into clean atomic ones by theme before pushing; go-team's gate runs it on worker branches |
 | `retro` | Evidence-first retrospective from a session's transcripts and repo, when the process isn't working |
+| `fleets` | Which go-team fleets are alive across every project — leases, last landing, session state |
 
 ## On-demand skills
 
