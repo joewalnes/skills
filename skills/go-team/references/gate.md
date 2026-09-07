@@ -16,7 +16,13 @@ cd "$V"
 # Read the worker's verdict file FIRST. Missing = refusal. HEAD mismatch = stale.
 [ -f .verdict ] || { echo "REFUSING: no .verdict — the worker never ran the check tool"; exit 1; }
 grep -q "^head=$(git rev-parse HEAD)$" .verdict || { echo "REFUSING: .verdict is for a different HEAD"; exit 1; }
-grep -E '=[1-9]' .verdict && { echo "REFUSING: an instrument failed:"; grep -E '=[1-9]' .verdict; exit 1; }
+# Every non-metadata line is an instrument and must be exactly 0. (An earlier
+# predicate, grep '=[1-9]', also matched the when=2026-... timestamp and refused every
+# green branch -- prove a gate check on a green verdict AND a red one before trusting it.)
+inst=$(grep -Ev '^(head|at|when)=' .verdict)
+[ -n "$inst" ] || { echo "REFUSING: .verdict has no instrument results"; exit 1; }
+bad=$(printf '%s\n' "$inst" | grep -Ev '=0$')   # test the text, not grep's exit: ugrep returns 1 for -v -q even with hits
+[ -z "$bad" ] || { echo "REFUSING: an instrument failed:"; echo "$bad"; exit 1; }
 # Everything from here down — build, test, drive the binary interactively,
 # swap in an old file version for a pre-fix/post-fix contrast, whatever
 # the claim requires — happens inside $V. Never `cd` back to the primary

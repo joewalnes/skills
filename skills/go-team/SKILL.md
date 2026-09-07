@@ -108,7 +108,7 @@ The crew has three seats. Each has a different source of work and a different de
 |---|---|---|---|---|
 | **Lane** | The human's own requests | `ASKS.md`, then `request.py inbox` (other projects' asks) | The thing that was asked for | The twelve-hour miss, below |
 | **Product** | Moving the product forward | Roadmap and tracker items a *user* would notice — not tooling, not follow-ups to the fleet's own findings | A user-visible change | Meta-work self-generates and wins every salience race; product work never does |
-| **Consolidation** | Making the codebase smaller and simpler | `/slop`: the hotspot table, reinvention and duplication findings, done items in the tracker, dead code | Lines removed, concepts reduced, a smaller learning surface — **never new capability** | Nothing else in this design removes anything. This is the counter-force to accretion, and a consolidation worker that lands 400 new lines has failed even if every line is correct |
+| **Consolidation** | Making the codebase smaller and simpler | `/slop`: the hotspot table, reinvention and duplication findings, done items in the tracker, dead code; and **non-code accretion** — spent planning artefacts at the repo root, docs describing code that's gone | Lines removed, concepts reduced, a smaller learning surface — **never new capability** | Nothing else in this design removes anything. This is the counter-force to accretion, and a consolidation worker that lands 400 new lines has failed even if every line is correct |
 
 Refill order on completion is lane, product, consolidation. The consolidation seat is never traded for a second product seat — that is the whole point of it. It takes only files no other seat holds a lease on.
 
@@ -134,7 +134,7 @@ If a seat is empty, fill it from its own sources:
 
 - **Lane:** `ASKS.md` top open item; then `request.py inbox`, blocking first.
 - **Product:** the roadmap; then tracker items a user would notice (`/bug-bash` finds the tracker). **Hunts are rationed, not standing.** An adversarial hunt round finds real bugs — nearly every round finds one in the previous round's fix — but each finding arrives as a fix plus tests plus a tracker entry, so a hunt is a code-generation engine. Dispatch one into the product seat only when the compass (below) reads B or better *and* the tracker has fewer than 30 open items. Otherwise the product seat takes product work.
-- **Consolidation:** run `/slop`; take the top hotspot file not under lease, the first reinvention finding, or the tracker's done items. The brief is one of: split the largest function in the hottest file; fold a duplicate into the existing one; move done items older than 30 days to `TODO-archive.md`; delete code nothing calls. Never "and while you're there."
+- **Consolidation:** run `/slop`; take the top hotspot file not under lease, the first reinvention finding, or the tracker's done items. The brief is one of: split the largest function in the hottest file; fold a duplicate into the existing one; move done items older than 30 days to `TODO-archive.md`; delete code nothing calls. When two consecutive code rounds land net-zero, the source code is not where the accretion is — point the next round at the repo root and docs: spent plans, superseded design notes, READMEs describing code that no longer exists (the websocketd fleet found this after two flat rounds on Go source). Never "and while you're there."
 
 Scorecard findings are not a source of work. They are a reading (see *The compass*).
 
