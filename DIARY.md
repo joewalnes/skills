@@ -4,6 +4,18 @@ Latest entries first. Record significant decisions, architecture changes, and no
 
 ---
 
+## 2026-09-07 — The push gate: a human reads every commit
+
+Joe looked at what the fleets were leaving behind — itch had 196 unpushed commits in merge topology — and asked for a gate: one commit per feature or fix before anything is pushed, and when work lands and is later improved, one commit for the final form, not the learning steps. *Assume a human will be reading every commit.*
+
+The `/consolidate` script from the night before couldn't do it. It stopped at merges and folded only adjacent commits, so a fix landed three landings after its feature stayed separate. Two changes made it fit for main. It now walks first-parent, so a landing is one unit whose files are its diff to main and whose message comes from the branch it merged — merges disappear. And a follow-up may fold *back* into an earlier group across unrelated commits, under one condition that makes the move exact rather than a rebase with conflicts: nothing in between touched any of its files. The rebuilt commit is the home commit's tree with the moved unit's files overlaid from the moved unit; since no intervening commit saw those files, the overlay is what a conflict-free rebase would have produced. The tip is verified byte-identical before the backup tag is even reported. Itch's 196 became 41, 15 of them moved back, in under a second.
+
+The gate itself is git's, not Claude's. `core.hooksPath` set globally points every repository on this machine at one dispatcher, so every process that runs git — Claude sessions, pi agents, Joe at the terminal — hits the pre-push check with nothing installed per repo, and running sessions picked it up the moment the config was written. The dispatcher chains to each repo's own `.git/hooks/*`, which is what makes a global hooks path safe: the pre-commit lint hooks `/project-setup` installs keep running. The bypass is `--no-verify`, denied to Claude sessions. I tested the refusal and the acceptance, the chain, the lease refusal and a tag push before trusting any of it; last night's gate taught me that a check proven on green alone is a check that may fail open.
+
+One rule for the fleets fell out of the safety analysis: main must never be consolidated while a lease is held, because workers' branches are based on the history being rewritten and merging them afterwards would resurrect it. The script refuses; go-team consolidates main at the stop condition, when no lease is held, and writes messages while it does — the generated `<branch>: N changes` is a placeholder, not something a reader should see.
+
+---
+
 ## 2026-09-07 — An unattended run through the queue, and what four fleets taught about silence
 
 Joe left a queue and one instruction: *knowing what you know about stalling, get to it and set yourself up for success without waiting for my turn.* This entry is written at the end of that run.

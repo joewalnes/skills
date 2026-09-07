@@ -26,7 +26,7 @@ Run `/scorecard` periodically — after completing a feature, before major PRs, 
 
 Break work into small atomic commits — one logical change per commit. Don't bundle unrelated changes. A bug fix, a new feature, and a refactor are three commits, not one.
 
-Commit often while working — checkpoints are cheap. Before pushing, run `/consolidate` so what lands is the atomic commits a reader would choose: still one logical change each, minus the fix-the-fix trail.
+Commit often while working — checkpoints are cheap. Before pushing, run `/consolidate` so what lands is the atomic commits a reader would choose: one per feature or fix, describing the final form, minus the fix-the-fix trail. A machine-wide pre-push hook (`skills/consolidate/hooks/`) refuses a range that isn't reader-ready; never bypass it with `--no-verify`.
 
 ## Documentation
 

@@ -65,7 +65,7 @@ Most of these skills are designed to run as one loop, not as isolated commands. 
 
 **3. Do the work.** Two modes:
 - **`/bug-bash`** — one agent works the tracker in priority order while you're around.
-- **`/go-team`** — a crew of three seats runs unattended: a *lane* seat on your own asks (and other projects' requests), a *product* seat on the roadmap, and a *consolidation* seat whose only job is removal — the counter-force a fleet otherwise lacks. Built on one premise: agents systematically overstate what they've done, so nothing merges on a report — every claim is reproduced in an isolated worktree, the gate reads a verdict file rather than the worker, and it checks *shape* (thesis, surface area, fix-by-addition) as well as correctness. A compass (`/slop` and `/scorecard` every ten cycles) redirects effort when the codebase is getting worse, and a stop condition pauses a fleet that's only feeding itself. It degrades rather than stalls. Run it on `/loop` and go to bed. Either way, commit often and run `/consolidate` before pushing — checkpoints are for you, the history is for everyone after.
+- **`/go-team`** — a crew of three seats runs unattended: a *lane* seat on your own asks (and other projects' requests), a *product* seat on the roadmap, and a *consolidation* seat whose only job is removal — the counter-force a fleet otherwise lacks. Built on one premise: agents systematically overstate what they've done, so nothing merges on a report — every claim is reproduced in an isolated worktree, the gate reads a verdict file rather than the worker, and it checks *shape* (thesis, surface area, fix-by-addition) as well as correctness. A compass (`/slop` and `/scorecard` every ten cycles) redirects effort when the codebase is getting worse, and a stop condition pauses a fleet that's only feeding itself. It degrades rather than stalls. Run it on `/loop` and go to bed. Either way, commit often and run `/consolidate` before pushing — checkpoints are for you, the history is for everyone after — and a machine-wide pre-push hook refuses a push that skipped it.
 
 **4. Check in — `/sitrep`.** When you come back: what landed, what's still running, and — first, above everything — anything waiting on a decision or permission only you can give. A blocked agent is the only line in a status report still costing you something while you read it.
 
@@ -85,7 +85,7 @@ Most of these skills are designed to run as one loop, not as isolated commands. 
 | `scorecard` | Periodic audit; findings feed back into the tracker |
 | `slop` | Audit for *unchosen* code — accretion trends on a repo, or a pre-merge check on a branch |
 | `request` | Ask another project's agents to do work — a mailbox outside every checkout, so nobody edits anyone else's repo |
-| `consolidate` | Rebuild unpushed commits into clean atomic ones by theme before pushing; go-team's gate runs it on worker branches |
+| `consolidate` | Rebuild unpushed commits into one per feature or fix, tree-identical; a machine-wide pre-push hook refuses pushes that aren't reader-ready |
 | `retro` | Evidence-first retrospective from a session's transcripts and repo, when the process isn't working |
 | `fleets` | Which go-team fleets are alive across every project — leases, last landing, session state |
 
