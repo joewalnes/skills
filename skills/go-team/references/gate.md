@@ -18,7 +18,11 @@ cd "$V"
 grep -q "^head=$(git rev-parse HEAD)$" .verdict || { echo "REFUSING: .verdict is for a different HEAD"; exit 1; }
 # Every non-metadata line is an instrument and must be exactly 0. (An earlier
 # predicate, grep '=[1-9]', also matched the when=2026-... timestamp and refused every
-# green branch -- prove a gate check on a green verdict AND a red one before trusting it.)
+# green branch. The first rewrite failed OPEN -- grep -v -q exits 1 on ugrep even with
+# hits -- and would have merged red branches as verified. A gate that cannot go red is
+# worse than no gate: it manufactures confidence. So prove any gate check on a known-good
+# AND a known-bad input before trusting it; the fail-open case is the one that never
+# announces itself.)
 inst=$(grep -Ev '^(head|at|when)=' .verdict)
 [ -n "$inst" ] || { echo "REFUSING: .verdict has no instrument results"; exit 1; }
 bad=$(printf '%s\n' "$inst" | grep -Ev '=0$')   # test the text, not grep's exit: ugrep returns 1 for -v -q even with hits
