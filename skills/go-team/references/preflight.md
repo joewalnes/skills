@@ -38,11 +38,15 @@ Check the project's `.claude/settings.json` (and `~/.claude/settings.json`):
 
 **If the setup version is behind the current `project-setup`,** offer the delta if the human is present; note it in the digest and carry on if not.
 
-**On the first run** (`/go-team start`), confirm with the human:
-- agent count — **default 3 workers plus the foreman**, one per seat (see *Three seats*), and the cost implication
-- autonomy: push to remote, or merge locally only
+**On the first run** (`/go-team start`) — in this order, and the fleet is not "running" until step 5 has printed:
 
-Record both in `CLAUDE.md` so you never ask twice. `start` is an attended command by design — if an unattended run hits an unconfigured project, take the defaults (3 workers, merge-locally-only: the safer half of each choice) and report that you did rather than waiting to be told.
+1. **Say this first, before any question:** *"Switch this session to bypass permissions now (shift+tab) — every worker's tool calls go through this session's gate, and in default mode you become the approval bottleneck several times an hour. I'll wait."* This is the human's action; nothing the fleet does can substitute for it. (A project allowlist alone is not enough — it covers the commands you predicted.)
+2. **Ask everything in one `AskUserQuestion`, with a recommended default on each, and never ask again:** agent count (3 — one per seat), autonomy (merge locally), any `## Agent operations` field that's missing, and a `Done:` line for every open ask in `ASKS.md` that lacks one — an ask with no completion condition is not a task, and "build the complete application" cannot be dispatched. Set `askUserQuestionTimeout: "10m"` in settings (`/project-setup` does this) so if the human has already walked away the question answers itself with the defaults instead of holding the night.
+3. **Write `.claude/agents/foreman.md`** from `references/foreman-agent.md` if it's missing. Its tool list has no `AskUserQuestion`.
+4. **Install the heartbeat:** `CronCreate` — every 20 minutes, prompt `/go-team`. Then `CronList` and read your own job back. If it isn't there, you have not started anything.
+5. **Spawn the foreman** (`subagent_type: "foreman"`) with the first heartbeat message, and only then report: *the fleet is running; heartbeat every 20 min; lane on <ask>.*
+
+Record agent count and autonomy in `CLAUDE.md` so you never ask twice. `start` is an attended command by design — if an unattended run hits an unconfigured project, take the defaults (3 workers, merge-locally-only: the safer half of each choice), install the heartbeat anyway, and report that you did rather than waiting to be told.
 
 **Width is a measured decision, not a habit.** Contention, merge fan-in, tracker-numbering collisions and duplicate dispatch all scale with concurrency; each extra agent stretches every other agent's builds and multiplies reconciliation. In the 48-hour run that shaped this section, roughly a third of all commits were the fleet fixing, reconciling or re-doing its own work, and the throughput gain above 2–3 agents was never established. Widen only when the foreman can name the number that says the bottleneck is worker count, and hold "at N" as a bound backed by that number. Three is the floor at which every seat has an occupant; widening adds product seats, never a fourth kind of seat.
 

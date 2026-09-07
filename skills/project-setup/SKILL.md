@@ -270,6 +270,7 @@ Derive the list rather than guessing: read the build/test commands out of the pr
 
 ```json
 {
+  "askUserQuestionTimeout": "10m",
   "permissions": {
     "defaultMode": "acceptEdits",
     "allow": [
@@ -279,6 +280,8 @@ Derive the list rather than guessing: read the build/test commands out of the pr
   }
 }
 ```
+
+`askUserQuestionTimeout` makes a question the human isn't there to answer auto-continue with its recommended default after ten minutes, instead of holding an unattended run all night — one fleet's first preflight question sat for fourteen hours.
 
 Two things worth flagging when you suggest this:
 
@@ -306,7 +309,13 @@ Add to `CLAUDE.md`:
 
 Then scaffold the files:
 
-- **`ASKS.md`** — the human's own requests, one per line with a status. Seed it empty with a one-line header saying what it's for. Agents rank this above everything they find for themselves.
+- **`ASKS.md`** — the human's own requests, one per entry with a status **and a `Done:` line** stating the verifiable completion condition. Seed it with the format:
+  ```
+  - [ ] **A1** <what Joe asked for>
+    Done: <what must be true, checkable by an agent — "the docs site builds and every page in the plan exists", not "docs are better">
+  ```
+  Agents rank this above everything they find for themselves, and `/go-team` refuses to dispatch an ask without a `Done:` line — "build the complete application" is not a task.
+- **`.claude/agents/foreman.md`** — the go-team foreman's agent definition (template in `~/.claude/skills/go-team/references/foreman-agent.md`). Its tool list has no `AskUserQuestion`, so the fleet cannot block on the human.
 - **`LESSONS.md`** — the ledger. Seed it with the entry template from `/go-team` (what happened / what it cost / the rule / **the mechanism** / scope) and the rule that you sharpen an existing lesson before adding a new one.
 - **The verdict file.** A `check` target or script that runs every instrument the recipe names and writes `.verdict` in the worktree root — one line per instrument `name=<exit code>`, plus `head=<full sha>` and `at=<iso8601>`. Merge paths read the file, never the worker's report. Add `.verdict` to `.gitignore`. Template (Python, per this repo's script rule):
 

@@ -62,7 +62,16 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("repo", nargs="?", default=".")
     ap.add_argument("--from", dest="frm"); ap.add_argument("--to", default="HEAD"); ap.add_argument("--at")
+    ap.add_argument("--compass", action="store_true", help="with --at: one machine-readable line for go-team's compass.log")
     a = ap.parse_args()
+    if a.at and a.compass:
+        from datetime import datetime, timezone
+        r = measure(a.repo, a.at); total = r["prod_loc"] + r["inline_test_loc"] + r["test_loc"]
+        big = r["biggest"][0] if r["biggest"] else (0, "-")
+        print(f"{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')} rev={git(a.repo, 'rev-parse', '--short', a.at).strip()} "
+              f"prod_loc={r['prod_loc']} test_share={100 * (total - r['prod_loc']) // total if total else 0}% pub_names={len(r['public'])} "
+              f"fns={r['fns']} fns_over_100={sum(1 for n, _, _ in r['longest'] if n > 100)} biggest={os.path.basename(big[1])}:{big[0]}")
+        return
     if a.at:
         show(a.at, measure(a.repo, a.at)); return
     frm = a.frm or git(a.repo, "rev-list", "--max-parents=0", "HEAD").split()[0]

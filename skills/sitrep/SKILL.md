@@ -1,7 +1,7 @@
 ---
 name: sitrep
 description: Where were we? Branch, in-progress work, blocked agents, inbox, next steps. Use when resuming a session.
-allowed-tools: Read, Glob, Grep, Bash, Agent, ListAgents, TaskOutput
+allowed-tools: Read, Glob, Grep, Bash, Agent, ListAgents, TaskOutput, CronList
 ---
 
 # Situation Report
@@ -19,7 +19,8 @@ Run these in parallel:
 5. **`ListAgents`** — background agents and other sessions (see below)
 6. `python3 ~/.claude/skills/request/scripts/request.py inbox` and `… sent` — work other projects have asked of this one, and what this one is waiting on elsewhere (skip silently if the script isn't installed)
 7. `ASKS.md` (or whatever `CLAUDE.md` names as the requests lane), if present — the human's own top open ask
-8. Scan the conversation history you have in context for what was last discussed
+8. If `$(git rev-parse --git-common-dir)/leases/` is non-empty, `CronList` — a fleet with leases and no scheduled `/go-team` job is a fleet nobody is ticking (measured: four such fleets sat 90–99% idle). That goes under **Needs you**.
+9. Scan the conversation history you have in context for what was last discussed
 
 ### Reading the agent roster
 

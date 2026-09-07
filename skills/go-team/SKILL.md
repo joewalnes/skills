@@ -14,7 +14,9 @@ Run several agents in parallel on one project, indefinitely, without a human in 
 
 **You are the account manager.** You talk to the human. You do not run the fleet.
 
-**A persistent FOREMAN agent runs the fleet.** Spawn it once, then resume it with SendMessage on every heartbeat so it keeps its context — a fresh agent each tick forgets the cross-tick knowledge that catches the real problems (that last round's fix had two branches and only one was driven; that a check reported a pass while measuring nothing).
+**A persistent FOREMAN agent runs the fleet.** Spawn it once — as the `foreman` agent defined in `.claude/agents/foreman.md` (`references/foreman-agent.md`; `start` writes it), which has **no `AskUserQuestion`** and so cannot park the fleet on a human — then resume it with SendMessage on every heartbeat so it keeps its context. A fresh agent each tick forgets the cross-tick knowledge that catches the real problems (that last round's fix had two branches and only one was driven; that a check reported a pass while measuring nothing). Every heartbeat message begins: *"Re-read `~/.claude/skills/go-team/SKILL.md`, then run one cycle."* A persistent foreman that never re-reads the skill runs last week's rules — the fleets that ran through the last rewrite never saw the seats, the shape gate or the compass.
+
+**The heartbeat is a cron, not a sentence.** `start` installs it (`CronCreate`, every 20 minutes, prompt `/go-team`) and confirms it with `CronList` before it is allowed to say the fleet is running. Measured across four fleets and 480 session-hours: zero scheduled wakeups, 90–99% idle. Every `/go-team` ran one cycle — the foreman worked a burst, its turn ended, and nothing resumed it until the human typed. "Run it on a loop" was an instruction; this is the mechanism.
 
 This split is structural on purpose. Telling yourself "be terse" is an instruction, and the central lesson of this whole skill is that **instructions do not bind and structure does**. If the orchestration happens in your context, it leaks into the channel — reliably, no matter how firmly you resolve otherwise.
 
@@ -35,7 +37,7 @@ If nothing changed, it replies exactly `quiet`.
 
 - **A quiet tick: nothing.** Not "quiet", not a health line. Silence.
 - **A digest only when substantial work is COMPLETE AND VALIDATED.** Two or three lines on what changed for the product, not how. Never hand over something that does not work or has not cleared the bar — a half-verified branch is not an update, it is homework.
-- **Decisions, flagged as decisions**, never buried mid-paragraph.
+- **Decisions, flagged as decisions**, never buried mid-paragraph — in `DECISION NEEDED`, **never via `AskUserQuestion`.** After `start`, that tool is off-limits to you and absent from the foreman. A question asked while the human is away costs the rest of the run: the first `start` on one project asked one preflight question and sat for fourteen hours. Take the conservative default, say what you assumed, and put the question in the digest.
 - **A check-in every 8 hours**, in this order: landed (product-facing first, measurement second), in flight, the top open item in the human's own lane and its status, waiting-on-human, decisions needed — and **what was not done.** Reporting completions while omitting omissions is exactly how the twelve-hour miss happened. Say plainly when a day was mostly instrument findings rather than product findings.
 
 **The relay rule.** Everything relayed to the human is marked *measured* or *inherited*. If you can't tell which, don't send it — twice a doc-sourced claim nearly reached the human as a measurement. A reviewer agreeing without having checked the mechanism adds confidence without adding evidence; when you agree, say what you actually verified. And **verify before reassuring**: before telling the human "your data was never at risk," check the code path yourself, cheaply, rather than relaying the foreman's reading. Same for any claim about the human's machine — a "stuck process" turned out to have finished; report a standing condition only after sampling twice.
@@ -84,7 +86,8 @@ This file is the loop, read every cycle. Everything else is read when its phase 
 
 | When | Read |
 |---|---|
-| `start`, or the first cycle on a project | `references/preflight.md` — unattended readiness, the `CLAUDE.md` agent-operations section, width |
+| `start`, or the first cycle on a project | `references/preflight.md` — bypass mode, the single question, the heartbeat, the foreman definition, width |
+| Spawning the foreman | `references/foreman-agent.md` — the agent definition `start` writes into `.claude/agents/` |
 | Briefing a worker | `references/evidence.md` — the rules of evidence, pasted into the brief |
 | A worker reports done | `references/failure-catalogue.md` — what agents get wrong, and the one diagnostic question |
 | Verifying or merging a branch | `references/gate.md` — the verification worktree, the gate script, the verdict file, identifiers |
@@ -165,7 +168,7 @@ Check whatever the project's `CLAUDE.md` declares as long-running: daemons, port
 
 Call `/sitrep`, and add two things it does not cover:
 
-- **The top open item in the requests lane, and its status** — not only what merged.
+- **The top open item in the requests lane, and whether a `slot=lane` lease exists for it** — computed (`grep -m1 '^- \[ \]' ASKS.md`; `ls .git/leases`), not remembered. One fleet spent 48 hours and 67 commits polishing an ask that was already done while the top open ask sat untouched, and logged every landing as `asks`. The first line of every report is the lane, and it is not allowed to be wrong.
 - **What you did *not* do.** Reporting completions while omitting omissions is exactly how the twelve-hour miss happened.
 
 If everything is healthy, the crew is full, and the lane is covered, say so in one line and stop. A quiet tick needs no narration.
@@ -191,9 +194,9 @@ The morning test is not "was each stall legitimate?" — each one usually is. It
 
 A fleet with one objective — verified throughput — and no counter-force converts compute into accretion. On the project that showed this, six days of fleet work added 140K production lines and removed 18K; the only net-deleting commits were the human's. Every commit was chosen and every one passed the gate. The *codebase* still got worse to work in. Correctness is not the objective; it is a constraint. The objective is that the product is further along **and** the codebase is no harder to change than it was this morning.
 
-**The compass.** Every 10 cycles, run `/slop --quick` and `/scorecard --quick` and append one line to `$(git rev-parse --git-common-dir)/compass.log`: `<iso> slop=<grade> scorecard=<grade> prod_loc=<n> pub_names=<n>` (the last two from `slop_surface.py`). Compare to the previous line. A slop grade that fell, or sits below B, redirects the next product-seat dispatch to consolidation and suspends hunts until it recovers. This is scorecard and slop used as a *measurement of whether the fleet is helping*, not as a source of more tasks.
+**The compass.** Every 10 cycles, append the output of `python3 ~/.claude/skills/slop/scripts/slop_surface.py --at HEAD --compass` — verbatim, it is one line — to `$(git rev-parse --git-common-dir)/compass.log`, then run `/slop --quick` and add its grade to that line. A compass line that is not script output is a fabricated measurement: one fleet wrote `slop=not-taken scorecard=not-taken` and moved on, the record present and the reading absent, the same shape as a worker's invented lint half. The check-in refuses a compass line with no numbers in it. Compare to the previous line. A slop grade that fell, or sits below B, redirects the next product-seat dispatch to consolidation and suspends hunts until it recovers. This is scorecard and slop used as a *measurement of whether the fleet is helping*, not as a source of more tasks.
 
-**Provenance.** Every merge appends to `$(git rev-parse --git-common-dir)/landings.log`: `<sha> <seat> <source: asks|inbox|roadmap|tracker|hunt|consolidation>`. This is what makes the next two rules mechanical instead of moods.
+**Provenance.** Every merge appends to `$(git rev-parse --git-common-dir)/landings.log`: `<sha> <seat> <source: asks|inbox|roadmap|tracker|hunt|consolidation>`. **Source is the queue the item was pulled from at dispatch.** A follow-up to a done ask is `tracker`, not `asks` — polish on finished work is work the fleet invented, however good. This is what makes the next two rules mechanical instead of moods.
 
 **The stop condition** (a pre-commitment of the binding kind — it must not yield to "but the queue is full"): if the last 20 landings include none from `asks` or `inbox`, and the compass has not improved across its last two readings, **pause the fleet** and report: *"the fleet is feeding itself."* The human decides whether it continues. A team that cannot stop is not one you can leave unattended.
 
@@ -232,7 +235,7 @@ Also name the project's shared singletons and how to avoid them (create your own
 
 **4. Rules of evidence** — `references/evidence.md`. Paste them in; do not assume they are known.
 
-**5. Deliverable** — branch name, where findings go, and *"an honest list of what you did not fix and why."* Ask for this explicitly and it usually arrives; omit it and it never does. **And the thesis, before implementing:** the worker's first commit body carries `Thesis: <one sentence that accounts for the whole change>` and `Surface: <public names, options, special cases added or removed, and why>`. Not "make it small" — "make it chosen." The gate refuses a branch without them, so it is a mechanism, not a request. A consolidation brief adds: *lines removed and concepts reduced are the deliverable; new capability is a failure.*
+**5. Deliverable** — branch name, where findings go, the ask's `Done:` line restated (an ask without one is not dispatched; `start` asks for the missing ones), and *"an honest list of what you did not fix and why."* Ask for this explicitly and it usually arrives; omit it and it never does. **And the thesis, before implementing:** the worker's first commit body carries `Thesis: <one sentence that accounts for the whole change>` and `Surface: <public names, options, special cases added or removed, and why>`. Not "make it small" — "make it chosen." The gate refuses a branch without them, so it is a mechanism, not a request. A consolidation brief adds: *lines removed and concepts reduced are the deliverable; new capability is a failure.*
 
 ### Model tiering
 
