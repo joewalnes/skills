@@ -85,6 +85,7 @@ git worktree remove --force "$T" 2>/dev/null || true   # last, and never fatal
 Why each guard exists, all of them from real incidents:
 
 - **Branch guard** — agents took the shared checkout off main *eight times* in one session, despite an explicit instruction in every dispatch.
+- **A second platform checks the same SHA** — if the recipe has a Linux VM, a remote runner, or any second builder, it builds *the merge result*, the exact `$SHA` above: publish it as a throwaway ref (`git push <runner-remote> $SHA:refs/gate/$SHA-$$`, deleted after) or sync the gate worktree — never the branch tip. One fleet's Linux half synced the branch tip while the macOS half built the merge result; an old docs-only branch failed on two tests a later commit had already fixed. The symmetric case is worse: a branch green at its own tip while the merge result is not.
 - **Isolated worktree at a specific SHA** — a gate that ran `git add -A` in the shared checkout nearly committed a stranger's half-finished refactor. It was caught by luck.
 - **Unique temp dir, cleanup last and non-fatal** — see the comment.
 - **`grep` for `^error` *and* test failures** — a lint that fails and a suite that fails do not report the same way, and one grep misses one of them.
