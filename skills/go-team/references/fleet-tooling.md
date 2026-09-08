@@ -18,6 +18,10 @@ kill -0 "$(cat "$LOG.pid")" 2>/dev/null && echo STILL-RUNNING || { echo DONE; ta
 
 If the harness offers a `Monitor` tool, use it instead of the loop; the shape is the same — a bounded wait you own, inside the turn.
 
+## Could-not-run is not failed
+
+Any cache the fleet keeps warm across runs — a build cache, a VM disk, a dependency store — needs a ceiling and a prune rule (one fleet's Linux VM filled to 38G/38G; every check failed, including main's). And the check tool must report a condition that prevented an instrument from running — disk full, toolchain missing, runner unreachable — as a distinct value (`build=unavailable:disk`), never as `build=1`. The gate still refuses either way, but `1` reads as a code regression, and the foreman then hunts a ghost on main. A "could not run" misreported as "ran and failed" is the same shape as every other lesson here: two states, one observation.
+
 ## Fleet tooling is code too
 
 Every piece of the foreman's own tooling that was falsified turned out defective — five of five; the un-falsified rest was never examined. A reaper deleted two live agents' worktrees. A purge script with a hardcoded default root came one guard line from `rm -rf /*` when a "sandbox" override it didn't read yielded an empty path. A merge-detection predicate was wrong four times in a day and was finally removed rather than fixed a fifth time. Rules:
