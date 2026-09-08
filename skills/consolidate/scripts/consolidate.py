@@ -66,27 +66,32 @@ def jaccard(a, b):
     return len(a & b) / len(a | b) if (a | b) else 0.0
 
 def related(u, group, home, rows, contiguous):
+    """Why u belongs with group: 'fixup' (objective: a fix/wip/typo of files the group touched),
+    'prefix' (adjacent, same subject prefix) or 'overlap' (heavy file overlap) -- or None."""
     gfiles = set().union(*(rows[i]["files"] for i in group))
-    if contiguous and theme(u) and theme(u) == theme(rows[home]): return True
-    if FIXY.match(u["subject"]) and (u["files"] & gfiles): return True
-    return jaccard(u["files"], gfiles) >= 0.5
+    if FIXY.match(u["subject"]) and (u["files"] & gfiles): return "fixup"
+    if contiguous and theme(u) and theme(u) == theme(rows[home]): return "prefix"
+    if jaccard(u["files"], gfiles) >= 0.5: return "overlap"
+    return None
 
 def propose(rows):
     """Returns groups as lists of row indices. group[0]..the last contiguous member is the run;
     members with index > home are moved back from later in the range."""
-    groups, homes = [], []
+    groups, homes, why = [], [], {}
     for i, u in enumerate(rows):
-        if groups and homes[-1] == i - 1 and related(u, groups[-1], homes[-1], rows, contiguous=True):
-            groups[-1].append(i); homes[-1] = i; continue
+        r = groups and homes[-1] == i - 1 and related(u, groups[-1], homes[-1], rows, contiguous=True)
+        if r:
+            groups[-1].append(i); homes[-1] = i; why[i] = r; continue
         moved = False
         for gi in range(len(groups) - 1, -1, -1):
             g = groups[gi]
             between = [j for j in range(homes[gi] + 1, i) if j not in g]
-            if related(u, g, homes[gi], rows, contiguous=False) and all(not (u["files"] & rows[j]["files"]) for j in between):
-                g.append(i); moved = True; break
+            r = related(u, g, homes[gi], rows, contiguous=False)
+            if r and all(not (u["files"] & rows[j]["files"]) for j in between):
+                g.append(i); moved = True; why[i] = r; break
         if not moved:
             groups.append([i]); homes.append(i)
-    return groups, homes
+    return groups, homes, why
 
 def split_trailers(body):
     lines = body.splitlines()
@@ -115,15 +120,16 @@ def leases_held(repo):
     if not os.path.isabs(d): d = os.path.join(repo, d)
     return sorted(os.listdir(d)) if os.path.isdir(d) else []
 
-def print_plan(rows, groups, homes):
+def print_plan(rows, groups, homes, why):
     merges = sum(u["merge"] for u in rows)
     print(f"{len(rows)} commits" + (f" ({merges} merges, linearized)" if merges else "") + f" -> {len(groups)} groups\n")
     for n, (g, home) in enumerate(zip(groups, homes), 1):
         print(f"[{n}] {default_message(g, rows).splitlines()[0]}")
         if len(g) > 1:
             for i in g:
-                tag = "  (moved back)" if i > home else ""
-                print(f"      {rows[i]['hash'][:8]}  {rows[i]['subject'][:76]}{tag}")
+                tags = [why[i]] if i in why else []
+                if i > home: tags.append("moved back")
+                print(f"      {rows[i]['hash'][:8]}  {rows[i]['subject'][:70]}" + (f"  ({', '.join(tags)})" if tags else ""))
 
 def rebuild(repo, base_sha, rows, groups, homes, msgs):
     """Build each group's commit from its home tree plus the files of members moved from later."""
@@ -165,13 +171,16 @@ def main():
     rows = units(repo, f"{base_sha}..{head_sha}")
     if not rows:
         print("nothing to consolidate"); return
-    groups, homes = propose(rows)
+    groups, homes, why = propose(rows)
     merges = sum(u["merge"] for u in rows)
     if a.check:
-        if merges == 0 and len(groups) == len(rows):
-            print(f"{len(rows)} commits, reader-ready"); return
-        print_plan(rows, groups, homes)
-        print(f"\nNOT READER-READY: {len(rows)} commits would be {len(groups)}. Run:\n"
+        # The gate refuses only on objective signals: merges, and fixup-shaped commits amending work in
+        # the range. Prefix/overlap joins are proposals -- two distinct changes to one file are legitimate.
+        fixups = sum(1 for r in why.values() if r == "fixup")
+        if merges == 0 and fixups == 0:
+            print(f"{len(rows)} commits, reader-ready" + (f" ({len(rows) - len(groups)} optional joins; run without --check to see)" if len(groups) < len(rows) else "")); return
+        print_plan(rows, groups, homes, why)
+        print(f"\nNOT READER-READY: {merges} merge(s), {fixups} fixup(s) amending work in this range. Run:\n"
               f"  python3 ~/.claude/skills/consolidate/scripts/consolidate.py {base_sha[:12]}..{head} --apply\n"
               f"and pass --messages FILE so each commit says what the change IS.")
         sys.exit(1)
@@ -180,7 +189,7 @@ def main():
     up = git(repo, "rev-parse", "@{upstream}", check=False).strip()
     if up and subprocess.run(["git", "-C", repo, "merge-base", "--is-ancestor", head_sha, up], capture_output=True).returncode == 0:
         sys.exit("refusing: this range is already pushed")
-    print_plan(rows, groups, homes)
+    print_plan(rows, groups, homes, why)
     if not a.apply:
         print("\n(dry run -- pass --apply to rebuild; --messages FILE to supply your own messages)"); return
     held = leases_held(repo)
